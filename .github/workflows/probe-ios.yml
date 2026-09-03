@@ -1,0 +1,72 @@
+name: probe-ios
+
+# Stage 0: build the address-space probe as two unsigned IPAs for sideloading.
+# No signing happens here. SideStore re-signs on device with your own Apple ID.
+on:
+  push:
+    paths:
+      - 'probe/**'
+      - '.github/workflows/probe-ios.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk iphoneos --show-sdk-version
+          cmake --version
+
+      - name: Configure
+        run: |
+          cmake -S probe -B build-ios -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
+
+      - name: Build
+        run: |
+          cmake --build build-ios --config Release -- \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      # An IPA is just a zip with the .app inside a top-level Payload/ directory.
+      - name: Package IPAs
+        run: |
+          set -eux
+          mkdir -p out
+          for app in build-ios/Release-iphoneos/*.app; do
+            name=$(basename "$app" .app)
+            rm -rf staging && mkdir -p staging/Payload
+            cp -R "$app" staging/Payload/
+            (cd staging && zip -qry "../out/${name}.ipa" Payload)
+          done
+          ls -lh out
+
+      # Confirm the linker actually honoured -pagezero_size, otherwise the
+      # lowmem variant silently tests the same thing as the default one.
+      - name: Verify __PAGEZERO differs between variants
+        run: |
+          set -eux
+          for app in build-ios/Release-iphoneos/*.app; do
+            name=$(basename "$app" .app)
+            echo "--- $name ---"
+            otool -l "$app/$name" | grep -A4 '__PAGEZERO' || echo "no __PAGEZERO segment"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geprobe-ipas
+          path: out/*.ipa
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GoldenEye 007 iOS port - plan</title>
+<style>
+:root{
+  --bg:#0e1013; --panel:#16191e; --line:#262b33; --ink:#e6e8ec; --dim:#9aa3b0;
+  --gold:#d4a437; --ok:#4ea672; --warn:#c9973f; --bad:#c9564f; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:56px 24px 96px}
+h1{font-size:31px;line-height:1.2;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:21px;margin:52px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line);letter-spacing:-.01em}
+h3{font-size:16px;margin:28px 0 8px;color:var(--gold)}
+p,li{color:#d3d7de}
+.sub{color:var(--dim);margin:0 0 34px;font-size:15px}
+code{font-family:var(--mono);font-size:.87em;background:#1c2027;padding:1.5px 5px;border-radius:4px;color:#cfd6e0}
+pre{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);
+  padding:14px 16px;border-radius:7px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.55}
+pre code{background:none;padding:0}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--dim);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:18px 20px;margin:18px 0}
+.card.risk{border-left:3px solid var(--bad)}
+.card.note{border-left:3px solid var(--gold)}
+.tag{display:inline-block;font-size:11.5px;font-family:var(--mono);padding:2px 8px;border-radius:20px;
+  border:1px solid var(--line);color:var(--dim)}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.stage{display:flex;gap:15px;align-items:baseline;margin:0 0 6px}
+.num{font-family:var(--mono);font-size:12px;color:var(--bg);background:var(--gold);
+  min-width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none}
+.stage h3{margin:0;color:var(--ink);font-size:17px}
+.body{padding-left:41px}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+ul{padding-left:19px} li{margin:5px 0}
+.foot{color:var(--dim);font-size:13px;margin-top:56px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>GoldenEye 007 on iOS</h1>
+<p class="sub">Research findings and staged plan. Public repo, unsigned IPAs via GitHub Actions, sideloaded with SideStore. No Mac.</p>
+
+<h2>What we are starting from</h2>
+
+<p>Your ROM is GoldenEye 007 (USA, rev 0), internal name <code>GOLDENEYE</code>, cart code <code>NGEE</code>,
+sha1 <code>abe01e4aeb033b6c0836819f549c791b26cfde83</code>. That is byte-identical to the US target in both
+<code>goldeneye_src/ge007.u.sha1</code> and the PC port's expected <code>ge007.ntsc-final.z64</code>. Every tool in
+this ecosystem will accept it unchanged.</p>
+
+<table>
+<tr><th>Reference</th><th>What it gives us</th><th>Fit</th></tr>
+<tr><td><code>goldeneye_src</code></td><td>Matching decomp. 313 C files, 166k lines. Only 3 <code>.s</code> files left in <code>src/game</code>.</td><td class="ok">source of truth</td></tr>
+<tr><td><code>goldeneye-pc-port</code></td><td>The only GoldenEye port layer that exists. Boots, renders 21 levels.</td><td class="warn">base, with caveats</td></tr>
+<tr><td><code>perfect_dark_pc</code></td><td>Sibling Rare engine, already arm64-clean and shipping on Switch.</td><td class="ok">architectural model</td></tr>
+<tr><td><code>sm64coopdx-ios</code></td><td>CMake&#8594;Xcode iOS pipeline, in-engine touch controls, ROM-in-Documents flow.</td><td class="ok">iOS template</td></tr>
+<tr><td><code>SCInsta</code></td><td>Unsigned-IPA CI patterns, no signing infrastructure at all.</td><td class="ok">CI patterns</td></tr>
+<tr><td><code>GoldenRecomp</code></td><td>Static recompilation, but wants a custom TLBFREE ROM and targets Vulkan/SPIR-V.</td><td class="bad">rejected</td></tr>
+</table>
+
+<h2>The one thing that decides this project</h2>
+
+<div class="card risk">
+<p><strong>The GoldenEye PC port hardcodes three mappings below the 4&nbsp;GB line, and arm64 iOS walls that entire region off.</strong></p>
+<p><code>port/src/dram.c</code> maps N64 working RAM twice, at <code>0x70000000</code> (an s32-safe view) and
+<code>0x80000000</code> (a KSEG0 mirror), because the decompiled game code does arithmetic like
+<code>*(u16 *)(word | 0x80000000)</code> on 32-bit values. <code>port/src/romdata.c</code> maps the cart image at
+<code>0x10000000</code>. All three use <code>MAP_FIXED</code>, and the build forces <code>-fno-pie</code>,
+<code>-no-pie</code> and <code>-Wl,-Ttext-segment=0x20000000</code> to keep symbols in that range.</p>
+<p>On arm64 Mach-O, <code>__PAGEZERO</code> is 4&nbsp;GB by default, so everything under
+<code>0x100000000</code> is unmapped and unmappable. iOS also requires PIE. The port's own
+<code>romdata.c:164</code> already names <code>0x100000000</code> as a boundary, so the author is aware of it.</p>
+<p>Whether a <em>sideloaded</em> app can shrink <code>__PAGEZERO</code> and claim those addresses is not
+documented anywhere I can check from Linux. It is the difference between a normal port and a
+rewrite of how 166k lines of game code address memory. So we answer it first, on your actual phone,
+before writing anything else.</p>
+</div>
+
+<h2>The staged plan</h2>
+
+<div class="stage"><span class="num">0</span><h3>Probe the address space <span class="tag">days</span></h3></div>
+<div class="body">
+<p>A ~170-line UIKit app, no SDL, no engine. It asks the kernel for each of the three regions with
+<code>vm_allocate(VM_FLAGS_FIXED)</code> and with <code>mmap(MAP_FIXED)</code>, writes a byte to the first and last
+page to prove the memory is actually usable rather than merely reserved, prints
+<code>__PAGEZERO</code>'s real size from the Mach-O header, and renders a verdict on screen.</p>
+<p>Two variants ship: one with the default 4&nbsp;GB <code>__PAGEZERO</code>, one linked with
+<code>-Wl,-pagezero_size,0x4000</code>. CI verifies with <code>otool -l</code> that the two genuinely differ,
+so the second is not silently testing the same thing as the first.</p>
+<p>This doubles as the proof of the whole CI recipe: CMake with the Xcode generator,
+<code>CODE_SIGNING_ALLOWED=NO</code>, and <code>Payload/</code>-into-zip IPA packaging. Whatever the verdict,
+the pipeline is then known-good.</p>
+<p><strong>Exit:</strong> you sideload two IPAs and screenshot the verdict.</p>
+</div>
+
+<div class="stage"><span class="num">1</span><h3>Fork the port, get it compiling for arm64</h3></div>
+<div class="body">
+<p>Fork <code>goldeneye-pc-port</code> into this repo and make it build with Clang for iOS. Two known
+obstacles, both independent of the Stage 0 answer:</p>
+<ul>
+<li><strong>Clang instead of GCC.</strong> The build forces GCC for <code>-fplan9-extensions</code>, which the
+decomp's <code>#define inherits struct</code> idiom in <code>src/bondtypes.h</code> relies on. Clang's
+<code>-fms-extensions</code> covers part of the same ground; the gap has to be measured, not guessed.</li>
+<li><strong>Memory model.</strong> If Stage 0 said yes, keep it and move on. If it said no, rebase the DRAM
+and cart views off fixed addresses. <code>port/src/libultra.c:796</code> already centralises the two bases
+in one array, which is the seam to widen. Perfect Dark proves the engine family does not need the
+trick: its <code>platform.h</code> treats <code>__aarch64__</code> as first-class with <code>PLATFORM_64BIT</code>.</li>
+</ul>
+<p><strong>Exit:</strong> an arm64 iOS binary links, even if it renders nothing.</p>
+</div>
+
+<div class="stage"><span class="num">2</span><h3>Rendering backend</h3></div>
+<div class="body">
+<p>The port has only <code>gfx_opengl.cpp</code>, written against desktop GL 3.3 core, which does not exist
+on iOS. The seam is <code>gfx_rendering_api.h</code>, plus <code>gfx_window_manager_api.h</code> for the window.</p>
+<p>Take GLES 3.0 through SDL2's existing iOS backend rather than writing Metal. SDL2 already supports
+iOS, sm64coopdx-ios does exactly this (<code>SDL_GL_CONTEXT_PROFILE_ES</code>, version 3.0 on iOS), and Perfect
+Dark's shader generator already emits GLES-aware GLSL with <code>precision mediump float</code> and
+<code>texture()</code> vs <code>texture2D()</code> switching. Metal is a later optimization, not a first step.</p>
+<p>Budget real time for shader compatibility. Both reference ports hit this and fixed it in dedicated
+commits; GLSL-ES rejects things desktop GL accepts.</p>
+<p><strong>Exit:</strong> the gun-barrel intro renders on the phone.</p>
+</div>
+
+<div class="stage"><span class="num">3</span><h3>Touch controls and the app shell</h3></div>
+<div class="body">
+<p>Follow sm64coopdx-ios and draw the controls with the game's own renderer rather than overlaying
+UIKit views. It keeps the layout in sync with the framebuffer, scales across iPhone and iPad, and
+avoids a second view hierarchy. Buttons map onto the same N64 button bitmask the engine already uses.</p>
+<p>A dual-stick FPS needs more thought here than a platformer did. GoldenEye's native scheme is unusual
+even on N64, so expect to design rather than copy: left stick to move, right drag to aim, with
+aim-assist worth considering given a touchscreen.</p>
+<p>The app shell needs landscape lock, <code>UIRequiresFullScreen</code>, hidden status bar, safe-area insets
+so buttons clear the Dynamic Island, and <code>CADisableMinimumFrameDurationOnPhone</code> for ProMotion.
+Two SDL quirks are already documented: disable accelerometer-as-joystick, and iPadOS turns gamepad
+presses into synthetic keyboard events.</p>
+</div>
+
+<div class="stage"><span class="num">4</span><h3>ROM loading, then audio</h3></div>
+<div class="body">
+<p><code>UIFileSharingEnabled</code> and <code>LSSupportsOpeningDocumentsInPlace</code> expose the app's Documents
+folder in the Files app. You drop <code>GoldenEye.z64</code> in, the app hashes it against the known US
+sha1, and refuses anything else. Optionally a <code>UIDocumentPickerViewController</code> import button.</p>
+<p>Audio is last because it is entirely absent from the GoldenEye port today on every platform:
+<code>port/src/audio.c</code> is 70 lines of stub. This is new work, not porting work, and the reason
+the port is not yet playable anywhere.</p>
+</div>
+
+<hr>
+
+<h2>Risks, honestly</h2>
+<table>
+<tr><th>Risk</th><th>Severity</th><th>Handling</th></tr>
+<tr><td>Low fixed mappings unavailable on iOS</td><td class="bad">gating</td><td>Stage 0 answers it before any other work</td></tr>
+<tr><td>Clang cannot build the decomp's struct-inheritance idiom</td><td class="warn">high</td><td>Measured in Stage 1; worst case is a mechanical source transform</td></tr>
+<tr><td>The port is not playable on <em>any</em> platform yet</td><td class="warn">high</td><td>We are porting a moving target. Track upstream, do not fork away from it</td></tr>
+<tr><td>No audio exists anywhere in the GoldenEye port</td><td class="warn">medium</td><td>Deferred to Stage 4, scoped as new work</td></tr>
+<tr><td>Upstream is one developer, four stars, weeks old</td><td class="warn">medium</td><td>Perfect Dark is the fallback architecture if it stalls</td></tr>
+<tr><td>iOS memory limits and background suspension</td><td>low</td><td>Full-screen landscape lock avoids most of it</td></tr>
+</table>
+
+<div class="card note">
+<h3 style="margin-top:0">If Stage 0 comes back negative</h3>
+<p>That is not the end, but it changes the shape of the work. The fallback is to build the iOS
+platform layer against <code>perfect_dark_pc</code> first, which is already arm64-clean, already playable,
+and shares fast3d and the same <code>port/</code> architecture. You would get a working N64 FPS on your
+phone early, and the renderer backend, touch controls and IPA pipeline all carry over to GoldenEye
+once its memory model is rebased. Nothing built would be wasted.</p>
+</div>
+
+<h2>Ground rules</h2>
+<ul>
+<li>No ROM, and nothing extracted from one, in the repo or in any artifact. <code>.gitignore</code> covers it.</li>
+<li>No GitHub Releases. CI artifacts only, 14-day retention. The repo is public for free macOS runner
+minutes, not to distribute builds.</li>
+<li><code>code/</code> stays gitignored read-only reference. Not submodules.</li>
+<li>macOS runner jobs carry <code>timeout-minutes</code> and narrow path triggers.</li>
+</ul>
+
+<p class="foot">Research across goldeneye_src, goldeneye-pc-port, GoldenRecomp, perfect_dark,
+perfect_dark_pc, sm64ex-ios, sm64coopdx-ios and SCInsta. Claims about the memory model and build
+flags were verified directly against the source, not taken from summaries.</p>
+
+</div></body></html>

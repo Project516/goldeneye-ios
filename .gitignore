@@ -1,0 +1,18 @@
+# Reference checkouts, not part of this project
+code/
+
+# Never commit ROMs or anything derived from them
+*.z64
+*.n64
+*.v64
+*.rom
+assets/
+baserom*
+
+# Build output
+build/
+build-ios/
+*.ipa
+*.app/
+*.dSYM/
+DerivedData/
