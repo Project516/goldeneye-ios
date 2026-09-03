@@ -15,7 +15,7 @@
 #import <UIKit/UIKit.h>
 #include <mach/mach.h>
 #include <mach/vm_map.h>
-#include <mach-o/getsect.h>
+#include <mach-o/loader.h>
 #include <mach-o/dyld.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -88,6 +88,28 @@ static BOOL probeRegion(NSMutableString *out, const char *label, uint64_t addr, 
     return a && b;
 }
 
+/* The iOS SDK does not declare getsegbynamefromheader_64, so walk the load
+ * commands of the main image and read __PAGEZERO's vmsize directly. */
+static NSString *pagezeroSize(void) {
+    const struct mach_header_64 *hdr =
+        (const struct mach_header_64 *)_dyld_get_image_header(0);
+    if (!hdr) return @"(no image)";
+
+    const uint8_t *cmd = (const uint8_t *)(hdr + 1);
+    for (uint32_t i = 0; i < hdr->ncmds; i++) {
+        const struct load_command *lc = (const struct load_command *)cmd;
+        if (lc->cmd == LC_SEGMENT_64) {
+            const struct segment_command_64 *sc =
+                (const struct segment_command_64 *)cmd;
+            if (strncmp(sc->segname, "__PAGEZERO", sizeof(sc->segname)) == 0) {
+                return [NSString stringWithFormat:@"0x%llx", sc->vmsize];
+            }
+        }
+        cmd += lc->cmdsize;
+    }
+    return @"(absent)";
+}
+
 static NSString *runProbe(void) {
     NSMutableString *out = [NSMutableString string];
 
@@ -98,10 +120,7 @@ static NSString *runProbe(void) {
     line(out, @"");
 
     /* __PAGEZERO is the thing that decides all of this. */
-    const struct mach_header_64 *hdr = (const struct mach_header_64 *)_dyld_get_image_header(0);
-    const struct segment_command_64 *pz = getsegbynamefromheader_64(hdr, "__PAGEZERO");
-    line(out, @"__PAGEZERO size: %@",
-         pz ? [NSString stringWithFormat:@"0x%llx", pz->vmsize] : @"(absent)");
+    line(out, @"__PAGEZERO size: %@", pagezeroSize());
     line(out, @"image slide:     0x%lx", (unsigned long)_dyld_get_image_vmaddr_slide(0));
     line(out, @"");
 
