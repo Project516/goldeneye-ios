@@ -9,14 +9,6 @@
 #include "player.h"
 #include "bondhead.h"
 #include "model.h"
-#ifdef PORT
-/* An animation record: the table's data array is a real pointer, and the
- * record id truncates to its offset because g_pc_animdata_base is
- * 4 GiB-aligned (D34). Adding the offset to the pointer keeps both halves. */
-#define ANIMREC(id) ((void *)((u8 *)&ptr_animation_table->data + (uintptr_t)(u32)(uintptr_t)(id)))
-#else
-#define ANIMREC(id) ((void *)((s32)(id) + (s32)&ptr_animation_table->data))
-#endif
 
 
 //data

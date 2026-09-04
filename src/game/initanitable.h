@@ -23,6 +23,25 @@ struct animation_table_data {
  */
 extern struct animation_table_data* ptr_animation_table;
 
+/* An animation record from an ANIM_DATA_* id. Those ids are absolute linker
+ * symbols whose value is a byte offset into the table, so the record address
+ * is the table's real data pointer plus that offset.
+ *
+ * The decomp writes this as `(s32)id + (s32)&ptr_animation_table->data`, which
+ * truncates the table pointer on PC. Three files had already fixed it with
+ * identical local macros while chraction.c and bondview2.c still built
+ * pointers the truncating way and crashed in modelSetAnimFrame (D197), so it
+ * lives here now, next to the table.
+ *
+ * Comparison sites that truncate BOTH sides are consistent and are left as the
+ * decomp wrote them. */
+#ifdef PORT
+#define ANIMREC(id) \
+    ((void *)((u8 *)&ptr_animation_table->data + (uintptr_t)(u32)(uintptr_t)(id)))
+#else
+#define ANIMREC(id) ((void *)((s32)(id) + (s32)&ptr_animation_table->data))
+#endif
+
 /**
  * Contains offsets into ptr_animation_table for player and guard animations.
  * The index of each value corresponds to `enum ANIMATION`.

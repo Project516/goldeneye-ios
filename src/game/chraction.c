@@ -510,7 +510,7 @@ void chrlvKneelingAnimationRelated(ChrRecord *self)
 
         if ((s32)objecthandlerGetModelAnim(self->model) == (s32)&ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow + (s32)&ptr_animation_table->data)
         {
-            modelSetAnimation(self->model, (struct ModelAnimation*)((s32)&ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow + (s32)&ptr_animation_table->data), (s32) self->model->gunhand, 109.0f, chrlvGetGuard007SpeedRating(self, 0.5f, 0.8f), 16.0f);
+            modelSetAnimation(self->model, ANIMREC(&ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow), (s32) self->model->gunhand, 109.0f, chrlvGetGuard007SpeedRating(self, 0.5f, 0.8f), 16.0f);
             modelSetAnimEndFrame(self->model, 140.0f);
         }
         else
@@ -2800,7 +2800,7 @@ s32 chrlvExplosionDamage(ChrRecord *self, coord3d *arg1, f32 damage, s32 arg3)
 
         modelSetAnimation(
             self_model,
-            (struct ModelAnimation *) ((s32)sp38->anonymous_0 + (s32)&ptr_animation_table->data),
+            ANIMREC(sp38->anonymous_0),
             sp38->anonymous_1,
             sp38->anonymous_3,
             sp38->anonymous_2,
@@ -5026,7 +5026,7 @@ void chrlvTickStand(ChrRecord *self)
                     modelSetAnimation(
                         self->model,
                         // awkward fix: addu instruction is backwards
-                        (struct ModelAnimation *)((s32)&ANIM_DATA_walking_unarmed + (s32)&ptr_animation_table->data),
+                        ANIMREC(&ANIM_DATA_walking_unarmed),
                         i,
                         0.0f,
                         0.5f,
@@ -5034,14 +5034,14 @@ void chrlvTickStand(ChrRecord *self)
 
                     modelSetAnimEndFrame(
                         self->model,
-                        (((u16*)((s32)&ANIM_DATA_walking_unarmed + (s32)&ptr_animation_table->data))[2] - 1));
+                        (((u16 *)ANIMREC(&ANIM_DATA_walking_unarmed))[2] - 1));
                 }
                 else if ((right != NULL) || (left != NULL))
                 {
                     modelSetAnimation(
                         self->model,
                         // awkward fix: addu instruction is backwards
-                        (struct ModelAnimation *)((s32)&ANIM_DATA_walking + (s32)&ptr_animation_table->data),
+                        ANIMREC(&ANIM_DATA_walking),
                         left != NULL,
                         0.0f,
                         0.5f,
@@ -5049,7 +5049,7 @@ void chrlvTickStand(ChrRecord *self)
 
                     modelSetAnimEndFrame(
                         self->model,
-                        (((u16*)((s32)&ANIM_DATA_walking + (s32)&ptr_animation_table->data))[2] - 1));
+                        (((u16 *)ANIMREC(&ANIM_DATA_walking))[2] - 1));
                 }
             }
             else if (self->act_stand.face_entitytype & 0x10)
@@ -5401,13 +5401,13 @@ void chrlvTickDie(ChrRecord *self)
         {
             modelSetAnimation(
                 model,
-                (void*)((s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data),
+                ANIMREC(&ANIM_DATA_jump_backwards),
                 objecthandlerGetModelGunhand(model) == 0,
                 50.0f,
                 0.3f,
-                (((u16*)((s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data))[2] - 1.0f) - 50.0f);
+                (((u16 *)ANIMREC(&ANIM_DATA_jump_backwards))[2] - 1.0f) - 50.0f);
 
-            modelSetAnimSpeed(model, 0.5f, (((u16*)((s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data))[2] - 1.0f) - 50.0f);
+            modelSetAnimSpeed(model, 0.5f, (((u16 *)ANIMREC(&ANIM_DATA_jump_backwards))[2] - 1.0f) - 50.0f);
 
             return;
         }
@@ -9083,8 +9083,8 @@ void chrlvTravelTick(ChrRecord *self, coord3d *arg1, StandTile *arg2, struct way
 
         if ((phi_s3 == NULL) || ((self->hidden & CHRHIDDEN_OFFSCREEN_PATROL) != 0))
         {
-            if ((objecthandlerGetModelAnim(self->model) == (struct ModelAnimation *)((s32)&ANIM_DATA_idle_unarmed + (s32)&ptr_animation_table->data))
-                || (objecthandlerGetModelAnim(self->model) == (struct ModelAnimation *)((s32)&ANIM_DATA_idle + (s32)&ptr_animation_table->data)))
+            if ((objecthandlerGetModelAnim(self->model) == ANIMREC(&ANIM_DATA_idle_unarmed))
+                || (objecthandlerGetModelAnim(self->model) == ANIMREC(&ANIM_DATA_idle)))
             {
                 if (self->actiontype == ACT_PATROL)
                 {

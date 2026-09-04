@@ -598,7 +598,17 @@ void solo_char_load(void)
                 pitemheader = NULL;
             }
 
+#ifdef PORT
+            /* D197: helddst is `(s32)weaponbuf0 + cursor`, so it holds the N64
+             * address of a slot in the weapon buffer. Zero means "none" and
+             * the callee tests for it, so keep that distinct from the window
+             * base. */
+            something_with_generating_object(self, prop, item, 0,
+                (WeaponObjRecord *)N64_TO_HOST_OR_NULL(helddst),
+                (ItemModelFileRecord *)pitemheader);
+#else
             something_with_generating_object(self, prop, item, 0, (WeaponObjRecord *)helddst, (ItemModelFileRecord *)pitemheader);
+#endif
         }
 
         chrlvMergeKneelToStand(self, 0.0f);
@@ -847,7 +857,7 @@ void bondviewSetCameraMode(s32 arg0)
             solo_char_load();
 
             // HACK: ptr_animation_table->data regalloc is backwards
-            sp38 = (struct ModelAnimation *)((s32)stage_intro_anim_table[g_IntroAnimationIndex].anonymous_0 + (s32)&ptr_animation_table->data);
+            sp38 = ANIMREC(stage_intro_anim_table[g_IntroAnimationIndex].anonymous_0);
             sp78 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_2;
             ftemp_1 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_1;
             ftemp_3 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_3;
@@ -1183,7 +1193,15 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
         lookat->y = g_CurrentPlayer->field_3C8;
         lookat->z = g_CurrentPlayer->field_3CC;
 
+#ifdef PORT
+        /* D197: `base` was reused as a byte offset three lines up
+         * (`base = (void *)(index << 5)`), so this is g_IntroSwirl advanced by
+         * that offset. Truncating the real pointer to add it loses the top
+         * half. */
+        swirl = PORT_PTRADD(void *, g_IntroSwirl, (u32)(uintptr_t)base);
+#else
         swirl = (void *)(((u32) g_IntroSwirl) + (u32) base);
+#endif
 
         if (!(swirl->bitflags & 4))
         {
