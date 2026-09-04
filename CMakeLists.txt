@@ -16,6 +16,12 @@
 cmake_minimum_required(VERSION 3.16)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# iOS is APPLE too, so every APPLE branch below has to know the difference.
+# Configure with -DCMAKE_SYSTEM_NAME=iOS (see docs/ios/).
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(TARGET_IOS TRUE)
+endif()
+
 # The decomp uses the `#define inherits struct` pattern (47x in
 # src/bondtypes.h): a nested `struct Base;` inside a derived struct. GCC
 # treats this as embedding the full base struct (correct layout, matches the
@@ -24,7 +30,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 # (GCC does hard-error on the one struct that declares a member with the same
 # name as an inherited one — CCTVRecord's `pad` — see docs/internals.md.)
 # An explicit -DCMAKE_C_COMPILER=... always wins.
-if(NOT DEFINED CMAKE_C_COMPILER)
+if(NOT DEFINED CMAKE_C_COMPILER AND NOT TARGET_IOS)
   find_program(_GE007_GCC NAMES gcc)
   if(_GE007_GCC)
     set(CMAKE_C_COMPILER "${_GE007_GCC}" CACHE FILEPATH "C compiler" FORCE)
@@ -36,7 +42,11 @@ if(NOT DEFINED CMAKE_C_COMPILER)
   endif()
 endif()
 
-if(APPLE)
+if(TARGET_IOS)
+  if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "" FORCE)
+  endif()
+elseif(APPLE)
   if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
   else()
@@ -95,6 +105,8 @@ message(STATUS "Target arch: ${TARGET_ARCH} (64bit=${TARGET_IS_64BIT})")
 
 if(WIN32)
   set(TARGET_OS "windows")
+elseif(TARGET_IOS)
+  set(TARGET_OS "ios")
 elseif(APPLE)
   set(TARGET_OS "osx")
 elseif(UNIX)
@@ -388,6 +400,10 @@ configure_file(
 if(NOT GL_LIBRARY)
   if(WIN32)
     set(GL_LIBRARY opengl32)
+  elseif(TARGET_IOS)
+    # No desktop GL on iOS. fast3d needs a GLES3 or Metal backend before this
+    # links; the framework is named here so the configure step gets that far.
+    set(GL_LIBRARY "-framework OpenGLES")
   elseif(APPLE)
     set(GL_LIBRARY "-framework OpenGL")
   else()

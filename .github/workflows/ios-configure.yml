@@ -1,0 +1,64 @@
+name: ios-configure
+
+# How far an iOS configure of the game gets. This is expected to fail for now,
+# so it never blocks: the game still needs SDL2 and zlib built for iOS and a
+# GLES or Metal backend for fast3d. The point is a running record of what the
+# next blocker actually is, on a real macOS toolchain rather than guessed at
+# from Linux.
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'port/**'
+      - '.github/workflows/ios-configure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  configure:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Show toolchain
+        run: |
+          cmake --version | head -1
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      # gen_romassets.py needs no ROM: it reads the committed CSV layout.
+      - name: Regenerate ROM-asset symbol file (US)
+        run: python3 scripts/gen_romassets.py u
+
+      - name: Configure for iOS
+        continue-on-error: true
+        run: |
+          cmake -S . -B build-ios -G Xcode \
+            -DROMID=ntsc-final \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+            2>&1 | tee configure.log
+
+      - name: Report the first blocker
+        run: |
+          echo "### iOS configure" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q "Configuring done" configure.log; then
+            echo "Configure succeeded." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "First error:" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            grep -m1 -A6 -E "CMake Error|error:" configure.log >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
