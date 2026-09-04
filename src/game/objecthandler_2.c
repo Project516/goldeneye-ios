@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include "chrobjdata.h"
 #include "image.h"
@@ -56,7 +59,17 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
         
         delta = ((s32) ((romremaining + filedata) - (s32) name)) - ((s32) (((u8 *) objheader->Switches) + (((u32) gdl) & 0x00ffffff)));
         
+#ifdef PORT
+        /* filedata is (s32)objheader->Switches, i.e. a window offset, so
+         * romremaining + filedata is an N64 address and needs the base to
+         * become a pointer. The first argument is already a host pointer
+         * because Switches is one. */
+        texCopyGdls((Gfx *) (((u8 *) objheader->Switches) + (((u32) gdl) & 0x00ffffff)),
+                    (Gfx *) N64_TO_HOST((u32)((romremaining + filedata) - (s32) name)),
+                    (s32) name);
+#else
         texCopyGdls((Gfx *) (((u8 *) objheader->Switches) + (((u32) gdl) & 0x00ffffff)), (Gfx *) ((romremaining + filedata) - (s32) name), (s32) name);
+#endif
 
         texLoadFromModelFileHeader(objheader, buffer);
 
