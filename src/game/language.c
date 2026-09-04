@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <bondgame.h>
 #include <memp.h>
@@ -455,5 +458,11 @@ u8 * langGet(s32 slotID)
     #ifdef DEBUG
     return (textslot_offset != 0) ? (u8 *)output_slot : "Sorry, string not loaded.";
     #endif
+#ifdef PORT
+    /* output_slot is textslot_offset plus (u32)textbank_ptr, so it is an N64
+     * address; the base has to go back before it is a string pointer. */
+    return (textslot_offset != 0) ? (u8 *)N64_TO_HOST(output_slot) : NULL;
+#else
     return (textslot_offset != 0) ? (u8*)output_slot : NULL;
+#endif
 }
