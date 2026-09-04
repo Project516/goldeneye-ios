@@ -156,3 +156,55 @@ offending pointer, instead of corrupting memory somewhere else entirely.
 
 That turns the audit's residual risk, the sites nobody traced, into a crash
 with an address rather than a heisenbug.
+
+## Where the rebase actually got to
+
+The window is implemented in `port/src/n64mem.c` and Linux runs on it. The
+game boots, loads, and renders: a 60 second run reached the cast screen with
+3541 VI posts and exited cleanly. It is not yet stable indefinitely.
+
+Working method, which is worth repeating rather than reading code: build, run,
+symbolicate. The `dramHostAddrValid` gate names a bad DMA target with its
+pointer, and `addr2line -f -C -s -e /tmp/build-pc/ge007.x86_64 0x<PC>` names
+the crash site. Almost every bug was found this way in a few minutes each.
+
+### The shape every bug took
+
+A real pointer squeezed through a 32-bit slot. That worked while the identity
+mapping kept addresses below 4 GiB and stops working the moment the window
+moves them. Three variants, and it is worth knowing which you are looking at:
+
+1. **A pointer stored in an `s32`/`u32` variable, field or parameter.** Fix by
+   widening it. Examples: `memp.c` `mempStart`, `language.c` `g_LangBanks`,
+   `title.c` `virtualaddress` and `barrelDisplayListPtr`, `boss.c`
+   `rspReplyMsg`, `chr_b.c` `opcode`, `front.c`
+   `display_aligned_white_text_to_screen`'s last two parameters.
+2. **A pointer truncated mid-expression, then cast back.** Fix by keeping the
+   arithmetic on the pointer. Examples: `music.c`'s three track loads,
+   `image.c`'s alignment casts, `front.c`'s `ptr_logo_and_walletbond_DL`.
+3. **A genuine N64 address held in 32 bits on purpose.** Do NOT widen these.
+   The window base is 4 GiB-aligned precisely so they round-trip. Add the base
+   at the dereference instead, which is what `N64_TO_HOST` is for. Examples:
+   `animation_table_ptrs1/2`, the `unk34`/`unk38`/`unk64`/`unk68` bitstream
+   fields, `PROMOTE`, `seg_addr`, `langGet`'s `output_slot`.
+
+Telling 3 apart from 1 is the only judgement call. If the value is also used
+as an offset, compared against another stored value, or written back into ROM
+layout, it is case 3.
+
+### Still open
+
+The 90 second run crashes in `texReadBits` (`image_bank.c:114`) under
+`texInflateZlib`, loading a cast-screen model texture. `struct texpool` and
+`struct tex` both hold real pointers and `compptr` derives from an already
+uintptr-aligned stack buffer, so this looks like corrupt decompressed input
+rather than another truncation. Worth checking what `texLoad` fed it before
+assuming it is a pointer bug.
+
+Not started: `obInit`'s `file_resource_table` `hw_address` pass. It has not
+been needed, because those entries are only ever used as DMA sources and
+`piServiceDma` converts them. Leave it alone unless something dereferences one
+directly.
+
+Windows is untouched and still identity-mapped. It will need the same sweep if
+anyone wants it working again.
