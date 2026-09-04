@@ -859,8 +859,19 @@ static void piServiceDma(s32 direction, u32 srcPA, void *dstVA, u32 size)
             char win[1200] = "";
             char *wp = win;
             for (int i = 0; i < 32; i++) {
-                wp += snprintf(wp, win + sizeof(win) - (wp - win),
-                               " %p", (void *)sp[i]);
+                /* The size argument is bytes left, not a pointer, and
+                 * snprintf returns what it WOULD have written, so both need
+                 * care or this walks off the end of win[]. Latent until
+                 * dramHostAddrValid() started rejecting anything. */
+                size_t used = (size_t)(wp - win);
+                if (used >= sizeof(win) - 1) {
+                    break;
+                }
+                int n = snprintf(wp, sizeof(win) - used, " %p", (void *)sp[i]);
+                if (n < 0 || (size_t)n >= sizeof(win) - used) {
+                    break;
+                }
+                wp += n;
             }
 #if defined(PLATFORM_WINDOWS)
             {
