@@ -169,7 +169,37 @@ configure_file(
 # the toolchain include dir from the compiler location (MinGW/MSYS2 layout:
 # bin/../include) and generate an absolute-path include.
 get_filename_component(_PORT_GCC_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
-get_filename_component(PORT_HOST_STRING_H "${_PORT_GCC_DIR}/../include/string.h" ABSOLUTE)
+# Resolve a host C-library header that a port/shim/ header includes by
+# absolute path. The obvious derivation (compiler dir + ../include) breaks in
+# two real cases: Apple keeps these in the SDK rather than beside the compiler,
+# and a ccache shim puts the compiler somewhere unrelated. Prefer the SDK on
+# Apple, then the compiler-relative guess, then a plain search.
+function(port_host_header outvar header what)
+  set(_p "")
+  if(APPLE AND CMAKE_OSX_SYSROOT AND EXISTS "${CMAKE_OSX_SYSROOT}/usr/include/${header}")
+    set(_p "${CMAKE_OSX_SYSROOT}/usr/include/${header}")
+  endif()
+  if(NOT _p)
+    get_filename_component(_g "${_PORT_GCC_DIR}/../include/${header}" ABSOLUTE)
+    if(EXISTS "${_g}")
+      set(_p "${_g}")
+    endif()
+  endif()
+  if(NOT _p)
+    unset(_d CACHE)
+    find_path(_d "${header}" PATHS /usr/include /usr/local/include NO_DEFAULT_PATH)
+    if(_d)
+      set(_p "${_d}/${header}")
+    endif()
+  endif()
+  if(NOT _p)
+    message(FATAL_ERROR "Cannot locate the host ${header} needed by ${what}")
+  endif()
+  message(STATUS "Host ${header}: ${_p}")
+  set(${outvar} "${_p}" PARENT_SCOPE)
+endfunction()
+
+port_host_header(PORT_HOST_STRING_H string.h "port/shim/string.h")
 configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hoststring.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hoststring.h" @ONLY)
@@ -178,7 +208,7 @@ configure_file(
 # the include path and shadows the system header; libstdc++'s <thread>/gthr
 # headers in the fast3d C++ TUs need the real <sched.h> (cpu_set_t,
 # sched_yield). Both MinGW and Linux keep <sched.h> at bin/../include.
-get_filename_component(PORT_HOST_SCHED_H "${_PORT_GCC_DIR}/../include/sched.h" ABSOLUTE)
+port_host_header(PORT_HOST_SCHED_H sched.h "port/shim/sched.h")
 configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hostsched.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hostsched.h" @ONLY)
@@ -188,7 +218,7 @@ configure_file(
 # one C++ TU (fast3d): MinGW's own sec_api/stdlib_s.h does `#include
 # <stdlib.h>`, which resolves to the N64 header via -I. The shim routes C++
 # TUs to the host header by absolute path (same trick as hoststring.h).
-get_filename_component(PORT_HOST_STDLIB_H "${_PORT_GCC_DIR}/../include/stdlib.h" ABSOLUTE)
+port_host_header(PORT_HOST_STDLIB_H stdlib.h "port/shim/stdlib.h")
 configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hoststdlib.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hoststdlib.h" @ONLY)
