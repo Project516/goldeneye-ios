@@ -266,7 +266,11 @@ void sub_GAME_7F09BBBC(void)
 * PD name: vtxstore_allocate
 * Description: Allocation for batches within the storage space
 */
+#ifdef PORT
+Vertex *vtxstore_allocate(s32 arg0, s32 type, s32 arg2, s32 arg3)
+#else
 s32 vtxstore_allocate(s32 arg0, s32 type, s32 arg2, s32 arg3) 
+#endif
 {
     s16* var_t3;
     s16 temp_t2;
@@ -344,7 +348,11 @@ s32 vtxstore_allocate(s32 arg0, s32 type, s32 arg2, s32 arg3)
         } else {
             *var_t3 -= temp_t2;
         }
+#ifdef PORT
+        return var_t0[var_a1].unk00;
+#else
         return (s32)var_t0[var_a1].unk00;
+#endif
     }
     return 0;
 }

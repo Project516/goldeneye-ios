@@ -471,7 +471,7 @@ s16 viGetX();
 s16 viGetY();
 void viSetColorMode16Bit();
 void viSetColorMode32Bit();
-s32 vtxstore_allocate();
+Vertex *vtxstore_allocate();  /* D197: returns a Vertex address, not an s32 */
 Gfx* watchRenderController();
 Gfx * watchRenderControllerOpaque();
 u32 weaponLoadProjectileModels();
