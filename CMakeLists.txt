@@ -248,6 +248,19 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hoststddef.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hoststddef.h" @ONLY)
 
+# Host <math.h> and <limits.h> for port/shim/math.h and port/shim/limits.h.
+# Only the C++ TUs need these: libc++'s <cmath>/<climits> include <math.h>/
+# <limits.h> and then assert they got libc++'s own wrapper, so resolving to
+# the decomp's N64 header is a hard error. C TUs keep the decomp's headers.
+port_host_header(PORT_HOST_MATH_H math.h "port/shim/math.h")
+configure_file(
+  "${CMAKE_SOURCE_DIR}/port/include/hostmath.h.in"
+  "${CMAKE_BINARY_DIR}/port/include/hostmath.h" @ONLY)
+port_host_header(PORT_HOST_LIMITS_H limits.h "port/shim/limits.h")
+configure_file(
+  "${CMAKE_SOURCE_DIR}/port/include/hostlimits.h.in"
+  "${CMAKE_BINARY_DIR}/port/include/hostlimits.h" @ONLY)
+
 # ----------------------------------------------------------------------------
 # Vendored dependencies (iOS)
 # ----------------------------------------------------------------------------
@@ -418,6 +431,19 @@ elseif(UNIX AND NOT APPLE)
   # relocations are fine (unlike a 0x140000000 base, which needs mcmodel=large).
   # This is the ELF analogue of the Windows build's fixed 0x140000000 base.
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Ttext-segment=0x20000000")
+endif()
+
+# libc++ requires its own headers to precede any C standard library on the
+# include path, and it checks: <cstddef> includes <stddef.h> and errors out if
+# what it got was not libc++'s stddef.h. Our -I list below puts port/shim and
+# the decomp's include/ first, which is right for the game's C code and wrong
+# for the four C++ TUs in port/fast3d. Putting c++/v1 ahead of them fixes the
+# check; libc++'s wrapper then #include_next's onward, landing on the shims,
+# which route to the real host header. CXX only, so no C TU sees this.
+if(APPLE AND CMAKE_OSX_SYSROOT AND EXISTS "${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
+  message(STATUS "C++ standard library: ${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
+  add_compile_options(
+    $<$<COMPILE_LANGUAGE:CXX>:-I${CMAKE_OSX_SYSROOT}/usr/include/c++/v1>)
 endif()
 
 # port/shim first: PC-only shadow headers (bondtypes.h, bondconstants.h,
