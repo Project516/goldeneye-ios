@@ -79,6 +79,13 @@ int n64memContains(N64MEM_UINTPTR p, N64MEM_SIZE len);
 #define N64_TO_HOST(v)   ((void *)(g_n64Base + (N64MEM_UINTPTR)(N64MEM_U32)(v)))
 #define N64_FROM_HOST(p) ((N64MEM_U32)(N64MEM_UINTPTR)(p))
 
+/* Like N64_TO_HOST, but a zero N64 address stays a null pointer. The window
+ * base makes N64_TO_HOST(0) a valid-looking address, which silently turns a
+ * list terminator or an unset field into a bogus object instead of a NULL the
+ * caller can test. Use this wherever the N64 code compares the field against
+ * NULL. */
+#define N64_TO_HOST_OR_NULL(v) ((v) ? N64_TO_HOST(v) : (void *)0)
+
 #ifdef __cplusplus
 }
 #endif

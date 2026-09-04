@@ -1237,13 +1237,13 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
 #if defined(VERSION_US)
                 setFontTables(ptrFontZurichBoldChars, ptrFontZurichBold);
 #ifdef PORT
-                hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang1c.lang_ptr);
+                hudmsgBottomShow((char *)N64_TO_HOST_OR_NULL(ptr_random06cam_entry->lang1c.lang_ptr));
 #else
                 hudmsgBottomShow(ptr_random06cam_entry->lang1c.lang_ptr);
 #endif
 #else
 #ifdef PORT
-                hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang1c.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
+                hudmsgBottomShow((char *)N64_TO_HOST_OR_NULL(ptr_random06cam_entry->lang1c.lang_ptr), ptrFontZurichBoldChars, ptrFontZurichBold);
 #else
                 hudmsgBottomShow(ptr_random06cam_entry->lang1c.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
 #endif
@@ -1256,13 +1256,13 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
                 {
 #if defined(VERSION_US)
 #ifdef PORT
-                    hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang20.lang_ptr);
+                    hudmsgBottomShow((char *)N64_TO_HOST_OR_NULL(ptr_random06cam_entry->lang20.lang_ptr));
 #else
                     hudmsgBottomShow(ptr_random06cam_entry->lang20.lang_ptr);
 #endif
 #else
 #ifdef PORT
-                    hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang20.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
+                    hudmsgBottomShow((char *)N64_TO_HOST_OR_NULL(ptr_random06cam_entry->lang20.lang_ptr), ptrFontZurichBoldChars, ptrFontZurichBold);
 #else
                     hudmsgBottomShow(ptr_random06cam_entry->lang20.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
 #endif

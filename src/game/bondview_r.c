@@ -381,7 +381,11 @@ void bondviewLoadSetupIntroSection(void)
         {
             rand_camera_index--;
 #ifdef PORT
-            ptr_random06cam_entry = (struct SetupIntroCamera *)(uintptr_t)ptr_random06cam_entry->prev;
+            /* D197: prev was stored as (u32)(uintptr_t)hostPointer, i.e. the
+             * N64 address. Widening it is not enough now that DRAM lives in
+             * the window; the base has to go back. */
+            ptr_random06cam_entry =
+                (struct SetupIntroCamera *)N64_TO_HOST_OR_NULL(ptr_random06cam_entry->prev);
 #else
             ptr_random06cam_entry = ptr_random06cam_entry->prev;
 #endif
