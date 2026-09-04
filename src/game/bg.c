@@ -3083,7 +3083,13 @@ void bgBuildRoomVtxBounds(s32 roomID)
 
             numvertices = ((gdl[cmdindex].dma.par >> 4) & 0xf) + 1;
 
+#ifdef PORT
+            /* vertices is a real buffer pointer; (u32) drops its high half.
+             * The segment offset is a plain byte offset into it. */
+            vtx = (Vtx *)((u8 *)vertices + SEGMENT_OFFSET(gdl[cmdindex].dma.addr));
+#else
             vtx = (Vtx *)(SEGMENT_OFFSET(gdl[cmdindex].dma.addr) + (u32)vertices);
+#endif
 
 #if defined(PORT)
             /* TEMP D69 safety net: the room primary/secondary DL binaries
