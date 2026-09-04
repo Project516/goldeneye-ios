@@ -82,6 +82,29 @@ void sysSleep(uint32_t micros)
 #endif
 }
 
+#if defined(PLATFORM_IOS)
+#include <sys/stat.h>
+
+/*
+ * The app's Documents directory. On iOS the working directory is not writable
+ * and is nowhere near the app container, so this is where everything the port
+ * reads or writes has to live: the user's own .z64, the converted asset
+ * sidecars, ge007.ini and the EEPROM file. It is also the one directory the
+ * user can reach, which is what UIFileSharingEnabled in Info.plist exposes to
+ * the Files app. HOME is the container root on iOS.
+ */
+static const char *iosDocumentsDir(void)
+{
+    static char dir[1024] = "";
+    if (!dir[0]) {
+        const char *home = getenv("HOME");
+        snprintf(dir, sizeof(dir), "%s/Documents", home ? home : ".");
+        mkdir(dir, 0755);
+    }
+    return dir;
+}
+#endif
+
 /* --- Logging ------------------------------------------------------------ */
 
 #if defined(PLATFORM_IOS)
@@ -258,29 +281,6 @@ void sysCpuRelax(void)
 /* --- Paths -------------------------------------------------------------- */
 
 static char exeDir[512] = ".";
-
-#if defined(PLATFORM_IOS)
-#include <sys/stat.h>
-
-/*
- * The app's Documents directory. On iOS the working directory is not writable
- * and is nowhere near the app container, so this is where everything the port
- * reads or writes has to live: the user's own .z64, the converted asset
- * sidecars, ge007.ini and the EEPROM file. It is also the one directory the
- * user can reach, which is what UIFileSharingEnabled in Info.plist exposes to
- * the Files app. HOME is the container root on iOS.
- */
-static const char *iosDocumentsDir(void)
-{
-    static char dir[1024] = "";
-    if (!dir[0]) {
-        const char *home = getenv("HOME");
-        snprintf(dir, sizeof(dir), "%s/Documents", home ? home : ".");
-        mkdir(dir, 0755);
-    }
-    return dir;
-}
-#endif
 
 const char *sysGetExeDir(void)
 {
