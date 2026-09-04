@@ -27,7 +27,8 @@ Judge these runs on `quit requested after N frames rendered`, not on the
 `D51 vi post` counter, which is timer-driven and keeps counting through a hang.
 Do not rebuild during a sweep; that overwrites the binary and the remaining
 levels report zero frames with no crash, which is absence of data rather than
-a failure.
+a failure. `tools_pc/sweep.sh` checks the binary's hash before each level and
+aborts if it moved, so use it rather than looping `run-headless.sh` by hand.
 
 **M-49 (2026-09-04), full-campaign playtest, upstream v0.1.0 win64 bundle.**
 Upstream's maintainer played every solo mission on the packaged Windows build
