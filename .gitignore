@@ -1,3 +1,158 @@
+#Git and VS files
+.*~
+__pycache__/
+.vscode/
+.[vV][sS]/
+
+*.rz
+*.tmp
+*.o
+branchdiff.sh
+branchdiff_report.txt
+*.dump
+*.cdata*
+/StructLayoutSettings.json
+# rom files
+*.[zZnN]64
+
+021990.bin
+0219D0.bin
+
+# Assets
+assets/animationtable_data.bin
+assets/animationtable_entries.bin
+assets/font/*.bin
+assets/ge007.e.118660.jfont_chardata.bin
+assets/ge007.j.118660.jfont_chardata.bin
+assets/jfont_dl.bin
+assets/font_chardataj.bin
+assets/font_chardatae.bin
+assets/ge007.u.29D160.Globalimagetable.bin
+assets/rarewarelogo.bin
+assets/ge007.u.2A4D50.usedby7F008DE4.bin
+assets/ge007.u.117880.jfont_dl.bin
+assets/ge007.u.117940.jfont_chardata.bin
+assets/ge007.u.123040.efont_chardata.bin
+assets/ge007.u.29E560.Globalimagetable_commandblock.bin
+#images
+assets/images/split/*.bin*
+assets/images/combined/*.bin*
+assets/images/out/*
+assets/images/split/png/*
+#music
+assets/music/*.bin
+assets/music/*.ctl
+assets/music/*.tbl
+assets/music/*.sbk
+assets/music/*.seq
+assets/music/*.aifc
+assets/music/*.aiff
+#obseg
+assets/obseg/bg/*.bin
+assets/obseg/bg/e/*.bin
+assets/obseg/chr/*/Model.c
+assets/obseg/gun/*/Model.c
+assets/obseg/ob__ob_end.seg
+assets/obseg/prop/*/Model.c
+assets/obseg/setup/*.bin
+assets/obseg/setup/[eju]/*.bin
+assets/obseg/stan/*.bin
+assets/obseg/text/*.bin
+assets/obseg/text/[eju]/*.bin
+assets/obseg/text/[eju]/*.c
+assets/ramrom/*.bin
+assets/ramrom/[eju]/*.bin
+# bin is required, but lets prevent accidental deletion
+bin/*
+build/*
+build-*/*
+notes/*
+
+# PC port (see CMakeLists.txt / port/)
+build-pc/
+tools_pc/*.exe
+data/
+# release bundles built by tools_pc/bundle-win.sh (repo root only; the
+# packaging template lives in tools_pc/dist/ and IS tracked)
+/dist/
+ge007.ini
+!build/test.c
+!notes/StyleGuide.md
+#tools
+# Original SGI IRIX 5.3 IDO toolchain (proprietary SGI binaries) and the SGI
+# image viewer are NOT distributed with this repo. They are only needed to
+# build the N64 ROM or to regenerate tools/ido5.3_recomp; the PC port does not
+# use them. See docs/SetupGuide.md "Recompile IDO" for how to obtain them.
+tools/irix/
+tools/SGIImageViewer.exe
+tools/extractor/*.o
+tools/extractor/extractor
+tools/aaa_rip/main.o
+tools/aaa_rip/aaa_rip
+tools/n64cksum
+tools/armips
+tools/gzipsrc/gzip
+tools/gzipsrc/*.o
+tools/report/report
+tools/report/index.html
+tools/report/JPN.htm
+tools/gaudio/*
+bondtypes_AI.h
+acpp_c.c
+as1_c.c
+cc_c.c
+cfe_c.c
+copt_c.c
+ugen_c.c
+ujoin_c.c
+uld_c.c
+umerge_c.c
+uopt_c.c
+usplit_c.c
+
+#exclude local user scripts in root folder
+/my_*.sh
+assets/obseg/em/data/alien8.seg
+assets/obseg/em/data/atic.seg
+assets/obseg/em/data/cookie.seg
+assets/obseg/em/data/gunfright.seg
+assets/obseg/em/data/jetman.seg
+assets/obseg/em/data/jetpac.seg
+assets/obseg/em/data/knightlore.seg
+assets/obseg/em/data/pssst.seg
+assets/obseg/em/data/sabre.seg
+assets/obseg/em/data/spec_rom.seg
+assets/obseg/em/data/under.seg
+
+scripts/local/
+scripts/make/local/
+
+# PC port debug/session artifacts
+_run.log
+ge007.crash.log
+.pi/
+run_out.log
+ppm/
+screenshots/
+# local Mupen64 Plus checkout (N64 reference footage); binaries, do not commit
+tools_pc/mupen64/
+
+# PC port run/scratch logs
+run_*.log
+d6*.log
+ge007.crash.log
+
+# Claude Code local state / agent worktrees
+.claude/
+
+# saved reference webpage assets (keep the .htm, not the sidecar cruft)
+docs/reference/*_files/
+nohup.out
+
+gdb.txt
+gdb-hang.txt
+
+# --- iOS port ---
 # Reference checkouts, not part of this project
 code/
 
@@ -6,13 +161,21 @@ code/
 *.n64
 *.v64
 *.rom
-assets/
-baserom*
 
-# Build output
-build/
+# iOS build output
 build-ios/
 *.ipa
-*.app/
 *.dSYM/
 DerivedData/
+
+# ROM-derived asset arrays that the PC/iOS build never compiles: the game reads
+# them out of the user's ROM at runtime via romassets_<region>.s. Only the five
+# assets CMakeLists actually compiles are tracked, plus the .inc.c files that
+# real sources #include.
+assets/**/*.c
+!assets/**/*.inc.c
+!assets/font_chardatae.c
+!assets/font_chardataj.c
+!assets/font_dl.c
+!assets/oddtextures.c
+!assets/rarewarelogo.c

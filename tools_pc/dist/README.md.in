@@ -1,0 +1,81 @@
+# GoldenEye 007 PC Port — @VERSION@ (alpha)
+
+A native PC port of the original Nintendo 64 *GoldenEye 007*, compiled from the
+[GoldenEye 007 decompilation](https://github.com/n64decomp/007).
+
+> **Very early research alpha — not a playable game.**
+> The intro and menus render and all 21 solo missions load, but there is
+> **no audio**, some front-end 3D models are broken, outdoor levels render with
+> a black sky, and you should expect crashes and glitches past the level intro.
+> This is a technical demo of the porting work.
+>
+> If you just want to *play* GoldenEye on PC, use one of the Xbox 360
+> recompilation projects instead — see the project page.
+
+Project & source: <https://github.com/jkdansereau/goldeneye-pc-port>
+
+This is the **@PLATFORM@** build. The executable is `@EXE@`.
+
+---
+
+## 1. You must supply your own ROM
+
+This package contains **no Nintendo code and no game data**. You need a
+*GoldenEye 007* Nintendo 64 ROM that **you legally own**, big-endian `.z64`,
+NTSC-U (US):
+
+| ROM filename | SHA-1 |
+|---|---|
+| `ge007.ntsc-final.z64` | `abe01e4aeb033b6c0836819f549c791b26cfde83` |
+
+Only the US ROM is supported in this alpha.
+
+@DEPS@
+## 2. Set up (one time)
+
+1. Unzip this folder anywhere.
+2. Make a `data` folder next to `@EXE@`.
+3. Copy your ROM into it, named exactly: `data/ge007.ntsc-final.z64`
+4. Prepare the ROM-derived data (needs Python 3.8+ on your PATH):
+
+   ```
+   python3 prepare-assets/prepare-assets.py
+   ```
+
+   (On Windows, `python prepare-assets\prepare-assets.py`.)
+
+   This reads your ROM and writes `data/pcmodels-ntsc-final/` and
+   `data/pccg-ntsc-final/` next to the executable. It uses only the Python
+   standard library — no compiler or N64 toolchain — and takes a few seconds.
+   Run it again only if you replace the ROM.
+
+## 3. Run
+
+Run `@EXE@` **from this folder**. Configuration is written to `ge007.ini` on
+first run.
+
+> If the game exits immediately reporting missing data, re-run step 2.4 above
+> and check it printed `ALL CHECKS PASSED` for both passes.
+
+## 4. Controls (defaults)
+
+| Action | Keyboard / mouse |
+|---|---|
+| Move / strafe | `W` `A` `S` `D` / arrows |
+| Aim / look | mouse |
+| Fire | left mouse / `LCtrl` |
+| Aim mode | right mouse / `LShift` |
+| Use / accept | `Space` / `E` |
+| Reload / cancel | `R` / `F` |
+| Start | `Enter` / `Tab` |
+
+Mouse sensitivity and Y-inversion are in the `[Input]` section of `ge007.ini`.
+
+## 5. Legal
+
+Non-commercial fan preservation / research project. **Not** affiliated with,
+endorsed by, or sponsored by Nintendo, Rare, Microsoft, MGM, Danjaq, or EON
+Productions. No ROM, game assets, or official logos are distributed.
+
+See `licenses/` for the port's MIT license, the upstream project `NOTICE`, and
+the third-party library licenses (SDL2, zlib@LICENSE_EXTRA@).

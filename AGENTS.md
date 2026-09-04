@@ -1,65 +1,76 @@
 # goldeneye-ios
 
+This is a fork of [goldeneye-pc-port](https://github.com/jkdansereau/goldeneye-pc-port)
+that adds an iOS target. Upstream's guidance for the port codebase follows
+below and still applies. Read `docs/ios/AGENTS.md` before touching anything
+under `probe/`, `.github/workflows/probe-ios.yml`, or the memory-mapping code
+in `port/src/dram.c`, `port/src/romdata.c` and `port/src/libultra.c`.
+
+The one thing to know up front: iOS cannot map any address below
+`0x100000000`, so the fixed mappings at `0x10000000`, `0x70000000` and
+`0x80000000` do not exist on that platform. They are being rebased onto a
+single 4 GiB-aligned window. See `docs/ios/plan.html`.
+
+---
+
+# AGENTS.md — GoldenEye 007 PC Port
+
 ## What this is
 
-An iOS port of GoldenEye 007 (N64), built on the existing decompilation and PC
-port work. Ships as an unsigned IPA sideloaded with SideStore. No Mac is
-involved: every Apple-toolchain build happens on GitHub Actions macOS runners.
+- `n64decomp/007`: WIP decompilation of GoldenEye 007 (N64), byte-matches US/EU/JP ROMs.
+- Active work: **PC port** modelled on the Perfect Dark PC port (same Rare "Indy" engine family).
+- **Reference docs:** `docs/internals.md` — architecture, GE-specific RSP deltas, phased plan (§1–§10). `docs/dev/findings.md` — the `Dxx` finding log (§F + §H, indexed at the top of §F); read the entry you need, don't linear-read. `docs/porting-notes.md` — the recurring N64→PC bug classes (dense; skim the headers, read what's relevant).
+- **Current status:** the README "Status" section, and `docs/dev/LEVEL-STATUS.md` for the per-level sweep. Current task + environment: `docs/HANDOFF.md` (a rolling local working file — may be absent in a fresh clone; fall back to the README "Status" section).
+- **Dispatching subagents?** `docs/dev-process.md` — task budgets/deadlines, file partitioning, pre-flight, the standard brief template. Every investigation subagent reads `docs/porting-notes.md` first and appends to it.
 
-## Direction
+## Non-negotiables
 
-Optimize for, in order:
+1. **N64 build untouched.** `Makefile`, `tools/`, `rsp/`, `ld/` belong to the N64 build. Never modify them for the PC port.
+2. **Game logic is unmodified.** The decomp's control flow and behavior are ground truth for 1:1 fidelity — never change them. All N64 *hardware* dependencies are satisfied by the `port/` layer; if a game file seems to need a behavioral change, stop — the fix belongs in `port/`. **Narrow exception (ABI/layout only):** the 32→64-bit transition forces a small class of mechanical, semantics-preserving edits that cannot be isolated in `port/` — chiefly pointer-width reconciliation in ROM-serialized structs (a struct with a 32-bit-pointer field misaligns when read as 64-bit). These follow the PD ground-truth pattern (store the embedded address as `u32`, cast to a real pointer at the use site), change no logic or behavior, and are each documented in `docs/dev/findings.md` §F/D3x. No other game-code edits are permitted.
+3. **Region macros mirror the Makefile.** `CMakeLists.txt` `REGION_DEFS` must match the N64 Makefile's per-region macro set exactly (finding A1). Divergence = silent branch divergence + link failures.
+4. **`src/libultrare/Makefile.libultrare` is ground truth** for original-vs-Rare libultra files (finding B3). The PC build compiles: `libultra/audio`, `libultrare/audio` (drvrNew/env/reverb), `libultra/gu`, and `libultrare/io/vitbl.c` only. All other `io/` + `os/` files are excluded and shimmed in `port/src/libultra.c`.
+5. **`rsp/graphics/gmain.s` is the RSP ground truth** — the authoritative reference for which GBI commands GE emits (modified fast3d, 1545 lines). We do not run it on PC; `port/fast3d/` replaces it. Use it to validate the software RSP's command decoding and the custom CC/RM modes.
 
-1. **Running at all on a real iPhone.** Correctness and boot-to-gameplay beat
-   features, resolution, and polish.
-2. **A platform layer that survives the game underneath changing.** The iOS
-   layer (renderer backend, touch input, filesystem, app shell) should stay
-   game-agnostic within the Rare N64 FPS engine family, so it can move between
-   the GoldenEye and Perfect Dark port trees.
-3. **Low memory and steady frame pacing.** Phones throttle and get killed for
-   memory. A stable 30 fps beats a stuttering 60.
+## Critical files
 
-Explicit non-goals: App Store distribution, jailbreak support, multiplayer
-netcode, and shipping anything ROM-derived.
+| File | Role |
+|---|---|
+| `docs/internals.md` | Architecture + RSP deltas + phased plan (§1–§10). Reference, not a linear read. |
+| `docs/dev/findings.md` | The `Dxx` finding log (§F/§H, indexed at top of §F). |
+| `CMakeLists.txt` | PC build (parallel to the N64 Makefile). Source list + `REGION_DEFS` live here. |
+| `port/src/` | Shims: `libultra.c` (OS API), `gesched.c` (scheduler), `n64stubs.c` (boot/TLB/FPU/rmon), `random.c` (PRNG ported verbatim from `random.s`), `ucode.c` (microcode segment markers), `main.c`, `video.c`, … |
+| `port/fast3d/` | Software RSP (adapted from the PD port). The main Phase 2 work. |
+| `rsp/graphics/gmain.s` | GE's RSP ucode — ground truth for GBI/CC/RM. |
+| A local **Perfect Dark PC port** checkout ([fgsfdsfgs/perfect_dark](https://github.com/fgsfdsfgs/perfect_dark)) | **Standing reference** — consult it whenever a work item has a PD analogue (same Rare engine family): port-layer ground truth (`port/fast3d/`, crash/system/video), plus copy candidates `port/src/preprocess/` (N64→PC asset conversion; `filemodel.c` is the D43 near-analogue) and `mixer.c`/`input.c`/`fs.c`. Port-layer files only; same family ≠ identical format — validate per field. Full audit: `docs/internals.md` §2.4. |
 
-## Hard rules
+## Build
 
-- **No ROM, and nothing extracted from a ROM, ever enters this repo or an
-  artifact.** The user supplies `GoldenEye.z64` on-device through the Files
-  app. `.gitignore` covers `*.z64`/`assets/`; do not weaken it.
-- **No GitHub Releases.** CI artifacts only, so builds are not distributed.
-  The repo is public for free macOS runner minutes, not to hand out builds.
-- macOS runners are the slow, contended ones. Keep `timeout-minutes` set and
-  do not add push triggers that rebuild on unrelated changes.
+```sh
+./build-pc.sh ntsc-final   # or pal-final / jpn-final
+```
 
-## Glossary
+Needs CMake + SDL2 + zlib + OpenGL, and must run from the MSYS2 MINGW64 shell
+(see `build-pc.sh` header and `docs/building.md`). ROM goes in `./data/`
+(not distributed); assets must be extracted from it first (`docs/building.md`).
 
-- **decomp** - `goldeneye_src`, the matching decompilation that rebuilds a
-  byte-identical N64 ROM. Source of truth for game logic.
-- **port layer** - the `port/` directory added on top of a decomp to run its
-  game code on a host OS, replacing libultra and the RSP/RDP.
-- **fast3d** - the N64 display-list interpreter (`gfx_pc.cpp`) that turns RSP
-  command streams into modern draw calls. Shared lineage across sm64-port,
-  Perfect Dark PC, and the GoldenEye PC port.
-- **rendering backend** - a concrete implementation of `gfx_rendering_api.h`
-  (currently only desktop GL). The iOS one is new work.
-- **DRAM views** - the port's two aliased mappings of N64 working RAM at
-  `0x70000000` and `0x80000000`, plus the cart image at `0x10000000`. See
-  `port/src/dram.c`. Whether iOS permits these is the project's gating risk.
-- **__PAGEZERO** - the unmapped guard region at the bottom of a Mach-O address
-  space, 4 GB by default on arm64, which covers all three DRAM/cart addresses.
-- **probe** - `probe/`, the Stage 0 throwaway app that answers the __PAGEZERO
-  question on real hardware.
+## Verification ritual (after any build-affecting change)
 
-## Reference checkouts
+1. **Undefined symbols.** Every symbol referenced by the compiled set (see `CMakeLists.txt`: `SRC_GAME`, `SRC_ENGINE`, `SRC_LIBAUDIO`, `SRC_LIBULTRARE_AUDIO`, `SRC_LIBULTRARE_DATA`, `SRC_GU`, `SRC_PORT*`) must be defined exactly once in the compiled set or in `port/`. Symbols that live in EXCLUDED files (`libultra/io/*`, `libultrare/io/*` except `vitbl.c`, `libultra/os/*`, `libultrare/os/*`, `sched.c`, `rmon.c`, `vi.c`, `src/*.s`) must be provided by `port/src/libultra.c`, `gesched.c`, `n64stubs.c`, `random.c`, or `ucode.c`.
+2. **Duplicates.** No symbol defined twice across the compiled set (watch `sp_*` stacks, `rmon*`, `os*` shims, segment markers).
+3. **Syntax.** Every touched file must parse; `./build-pc.sh` is the final word.
 
-`code/` holds read-only upstream clones and is gitignored. Do not edit them,
-and do not add them as submodules.
+Run `/linkcheck` for this sweep. Record new findings in `docs/dev/findings.md` §F/§H style (next `Dxx` label after the last used) and add the label to the §F index.
 
-| Path | Role |
-| --- | --- |
-| `code/goldeneye_src` | the decomp; our ROM's sha1 matches its US target |
-| `code/goldeneye-pc-port` | the GoldenEye port layer we intend to build on |
-| `code/perfect_dark_pc` | mature, arm64-clean port of the sibling engine |
-| `code/sm64coopdx-ios` | the iOS packaging and touch-control template |
-| `code/SCInsta` | unsigned-IPA CI patterns |
+## Phase status (summary — see README + `docs/dev/findings.md` for detail)
+
+- **Phase 0–1.5:** done. Build system, boot chain, OS-shim layer, fast3d
+  integration, first frames, full intro rendering.
+- **Phase 2 (rendering):** in progress. All 21 solo levels load + render +
+  survive an unattended window; front end (menu → mission select → briefing →
+  start) is functional; file-backed EEPROM saves work. Cosmetic defects are
+  parked in `docs/dev/GRAPHICS-BACKLOG.md`.
+- **Phase 3 (audio + input):** input layer done (`port/src/input.c`); polish
+  bugs open (D118* mouse-look residuals; interactive feel-checks owed). Audio
+  not started — libaudio → SDL, copy-and-adapt from the PD port's `mixer.c`.
+- **Phase 4 (saves + polish):** file-backed EEPROM done; widescreen, config,
+  rebinding UI outstanding.
