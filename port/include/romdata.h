@@ -31,6 +31,14 @@ const u8 *romdataGetRom(void);
 u32       romdataGetRomSize(void);
 
 /*
+ * Newline-separated list of every path the last romdataInit() actually
+ * opened. Valid after the call, success or failure. This is the answer to
+ * "where do I put the ROM", because the "$S/" and "$E/" roots expand
+ * differently per platform (the app's Documents folder on iOS).
+ */
+const char *romdataGetSearchPaths(void);
+
+/*
  * True if [addr, addr+size) is a valid cart address (0x10000000+) inside the
  * mapped image. The PI shims call this before servicing DMA.
  */

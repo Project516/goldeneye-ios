@@ -58,6 +58,14 @@ static u32  romSize = 0;
 static int  mappedAtCartBase = 0;
 #if !defined(PLATFORM_WINDOWS)
 static unsigned long long mappedLen = 0;  /* munmap() needs the length */
+
+/* Every path romdataInit() tried, newline separated. Kept after the call so
+ * the failure can be reported somewhere the user can actually see it: "$S/"
+ * and "$E/" expand per platform, so the list is the only useful answer to
+ * "where should I put the ROM". */
+static char s_triedPaths[1024] = "";
+
+const char *romdataGetSearchPaths(void) { return s_triedPaths; }
 #endif
 
 /* D34 (docs/internals.md): PE image base, low 32 bits zero. On N64 the
@@ -172,7 +180,8 @@ int romdataInit(void)
      * actually tried is accumulated, because "$S/" and "$E/" expand
      * differently per platform (Documents on iOS) and the failure message is
      * the only thing the user has to go on. */
-    char tried[1024] = "";
+    s_triedPaths[0] = 0;
+    char *tried = s_triedPaths;
     for (char *tok = strtok(listBuf, "|"); tok;
          tok = strtok(NULL, "|")) {
         static const char *locs[3] = { "$S/", "$E/", "./" };
@@ -188,7 +197,7 @@ int romdataInit(void)
              * platforms, so only list each distinct path once. */
             if (!strstr(tried, resolved)) {
                 size_t used = strlen(tried);
-                snprintf(tried + used, sizeof(tried) - used, "%s  %s",
+                snprintf(tried + used, sizeof(s_triedPaths) - used, "%s%s",
                          used ? "\n" : "", resolved);
             }
             f = fsOpen(resolved, "rb");

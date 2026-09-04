@@ -82,22 +82,6 @@ static void portAtExit(void)
     configSave();
 }
 
-#if defined(PLATFORM_IOS)
-/*
- * On iOS the real main() lives in libSDL2main.a and does
- * SDL_UIKitRunApp(argc, argv, SDL_main), which is what creates the
- * UIApplication and its run loop. A plain main() here satisfies the _main
- * symbol itself, so SDL's is never linked, there is no UIApplication, and
- * iOS leaves the launch screen up forever. UILaunchScreen is an empty dict,
- * so that shows as a solid black screen with no crash and no log.
- *
- * SDL_main.h does this rename with a macro, but it drags SDL_stdinc.h
- * through the decomp's header shims, and this file includes no SDL at all.
- * Do the rename by hand instead.
- */
-#define main SDL_main
-#endif
-
 int main(int argc, char **argv)
 {
     sysSetArgs(argc, argv);
@@ -128,6 +112,23 @@ int main(int argc, char **argv)
          * both roots expand to the app's Documents folder. */
         sysLogPrintf(LOG_ERROR, "Failed to load ROM. Put a GoldenEye .z64 at "
                     "one of the paths listed above.");
+#if defined(PLATFORM_IOS)
+        /* A sideloaded app has no console, and the log is no use to the user
+         * if the app never wrote one, so put the failure on screen. The
+         * message box needs a window to present against, and videoInit()
+         * depends on nothing but config, so it is safe to bring up even
+         * though no ROM loaded. */
+        {
+            char msg[1280];
+            snprintf(msg, sizeof(msg),
+                     "Put a GoldenEye .z64 in this app's Documents folder, "
+                     "named exactly one of the paths below, then reopen.\n\n%s",
+                     romdataGetSearchPaths());
+            if (videoInit() == 0) {
+                sysShowMessage("No ROM found", msg);
+            }
+        }
+#endif
         return 1;
     }
 

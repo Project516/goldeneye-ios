@@ -213,6 +213,18 @@ static double fpsWindowStart = 0.0;
 static int fpsNumFrames = 0;
 static float vidAvgFPS = 0.f;
 
+void sysShowMessage(const char *title, const char *text)
+{
+#if defined(PLATFORM_IOS)
+    if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, text, NULL) != 0) {
+        sysLogPrintf(LOG_WARNING, "sysShowMessage: %s", SDL_GetError());
+    }
+#else
+    (void)title;
+    (void)text;
+#endif
+}
+
 int videoInit(void)
 {
     wmAPI = &gfx_sdl;

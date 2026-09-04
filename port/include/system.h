@@ -54,6 +54,15 @@ void sysFatalError(const char *fmt, ...)
  */
 const char *sysResolvePath(const char *path);
 
+/*
+ * Put a message in front of the user. Only does anything on iOS, where a
+ * sideloaded app has no console and no reachable log until something has
+ * already written to Documents. Implemented in video.c, which is the only
+ * port file that already includes SDL. Needs a window to present against,
+ * so call it after videoInit() where that is possible.
+ */
+void sysShowMessage(const char *title, const char *text);
+
 /* Return the directory containing the executable. */
 const char *sysGetExeDir(void);
 
