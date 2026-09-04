@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <os_extension.h>
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -8019,7 +8022,7 @@ void init_menu18_displaycast(void)
 #else
     modelSetAnimPlaySpeed(cast_model, 0.5f, 0);
 #endif
-    modelSetAnimation(cast_model, animation_table_ptrs1[intro_animation_table[randomly_selected_intro_animation].animID], flip, intro_animation_table[randomly_selected_intro_animation].startframeoffset, intro_animation_table[randomly_selected_intro_animation].playback_speed, 0.0f);
+    modelSetAnimation(cast_model, (struct ModelAnimation *)N64_TO_HOST(animation_table_ptrs1[intro_animation_table[randomly_selected_intro_animation].animID]), flip, intro_animation_table[randomly_selected_intro_animation].startframeoffset, intro_animation_table[randomly_selected_intro_animation].playback_speed, 0.0f);
 
     g_MenuTimer = 0;
     cast_camera_dist_start = ((((f32) ((u32) randomGetNext())) * (1.0f / U32_MAX)) * 80.0f) + 70.0f;

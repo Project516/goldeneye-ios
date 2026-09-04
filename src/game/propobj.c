@@ -6,6 +6,9 @@
 
   ---------------------------------------------------------------------*/
 
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <math.h>
 #include <PR/libaudio.h>
@@ -5719,7 +5722,7 @@ s32 objTick(struct PropRecord *prop)
 #endif
 				temp_s0_6 = render_pad2F4->model;
 
-				if (temp_s0_6->anim == (ModelAnimation *)animation_table_ptrs2[1]) /* D32/D33 */
+				if (temp_s0_6->anim == (ModelAnimation *)N64_TO_HOST(animation_table_ptrs2[1])) /* D32/D33 */
 				{
 					modelSetAnimTranslationScale(temp_s0_6, 10.438f);
 					setsubroty(render_pad2F4->model, M_PI_F);

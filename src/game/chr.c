@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <PR/gbi.h>
 #include <bondgame.h>
@@ -2364,9 +2367,9 @@ s32 chrTick(PropRecord *prop)
         {
             if (((ModelAnimation *)animation_table_ptrs1[g_AnimationTablePointerCountRelated]) != ((ModelAnimation *)1))
             {
-                if (objecthandlerGetModelAnim(model) != ((ModelAnimation *)animation_table_ptrs1[g_AnimationTablePointerCountRelated]))
+                if (objecthandlerGetModelAnim(model) != ((ModelAnimation *)N64_TO_HOST(animation_table_ptrs1[g_AnimationTablePointerCountRelated])))
                 {
-                    modelSetAnimation(model, (ModelAnimation *)animation_table_ptrs1[g_AnimationTablePointerCountRelated], 0, 0.0f, 0.5f, 0.0f);
+                    modelSetAnimation(model, (ModelAnimation *)N64_TO_HOST(animation_table_ptrs1[g_AnimationTablePointerCountRelated]), 0, 0.0f, 0.5f, 0.0f);
                 }
             }
         }

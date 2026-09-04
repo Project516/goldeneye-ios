@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include "chrai.h"
 #include "bg.h"
 #include "bgfog.h"
@@ -1087,7 +1090,7 @@ void                   ai(PropDefHeaderRecord *Entityp, PROP_TYPE EntityType)
                     {
                         zero = 0; // debug value maybe?
                         /* D32/D33: table holds s32 offsets; cast at use site. */
-                        modelSetAnimation(AircraftEntityp->model, (ModelAnimation *)animation_table_ptrs2[anim_id], zero, startframe, 0.5f, (s32)ai->INTERPOL_TIME60);
+                        modelSetAnimation(AircraftEntityp->model, (ModelAnimation *)N64_TO_HOST(animation_table_ptrs2[anim_id]), zero, startframe, 0.5f, (s32)ai->INTERPOL_TIME60);
                         if (endframe >= 0)
                         {
                             modelSetAnimEndFrame(AircraftEntityp->model, endframe);

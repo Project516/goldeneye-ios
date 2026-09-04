@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <bondaicommands.h>
 #include <bondgame.h>
@@ -600,7 +603,7 @@ void chrlvPerformAnimationForActor(ChrRecord *self, s32 animID, s32 startframe, 
     }
 
     chrStopFiring(self);
-    modelSetAnimation(self->model, (void *)animation_table_ptrs1[animID], (bitfield & ANIM_MIRROR) != 0, startframef, phi_f0, (f32)interpol_time60);
+    modelSetAnimation(self->model, (void *)N64_TO_HOST(animation_table_ptrs1[animID]), (bitfield & ANIM_MIRROR) != 0, startframef, phi_f0, (f32)interpol_time60);
 
     if (endframe >= 0)
     {
