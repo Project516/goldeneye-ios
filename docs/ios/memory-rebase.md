@@ -139,11 +139,17 @@ addresses fit. Most dangerous first:
 5. `src/game/title.c:399-400` and `:463-464` — file-scope `s32` variables
    holding N64 virtual addresses, passed straight to `romCopy`.
 
-Three need review rather than a known fix: `src/init.c:132` depends on
-`gen_romassets.py` emitting rebased values; the `load_object_fill_header`
-destination family has ~15 origins not fully traced; and `ob.c:179/241` call
-`romCopy` with four arguments against a three-parameter function through an
-implicit declaration, so the compiler never checks them.
+Two need review rather than a known fix: `src/init.c:132` depends on
+`gen_romassets.py` emitting rebased values, and the `load_object_fill_header`
+destination family has ~15 origins not fully traced.
+
+`ob.c:179/241` are not among them. Both call `romCopy` with four arguments
+against a three-parameter function, but this is already covered: the call
+binds to `void romCopy();` in `port/include/pc_protos.h`, so there is no
+implicit declaration, and an empty parameter list means the fourth argument
+is simply discarded by the callee, the same as on MIPS. Only `:241` is
+compiled either way, because `:179` sits under `#if !defined(LEFTOVERDEBUG)`
+and the PC build defines `LEFTOVERDEBUG` (`CMakeLists.txt:151`).
 
 ### Do this before touching any of them
 
