@@ -7,12 +7,15 @@ name: ios-ipa
 #
 # Manual only, on purpose: it costs a macOS runner and it needs two secrets.
 #
-# NOT USABLE YET. The iOS app shell does not exist: CMake builds a plain
-# arm64 executable, not a MACOSX_BUNDLE target with an Info.plist, and fast3d
-# still targets desktop GL 3.3 rather than GLES3 or Metal. The steps below are
-# correct in shape and will start producing a real IPA once those two land.
-# Until then this fails at "Locate the app bundle", which is the honest
-# outcome rather than a green run that shipped nothing.
+# The IPA this produces installs and launches but does not yet render: fast3d
+# still targets desktop GL 3.3 rather than GLES3 or Metal, so expect it to
+# fail at renderer init on device. It is built anyway because it exercises the
+# whole delivery chain, and because a bundle that boots is the thing the
+# renderer work gets tested against.
+#
+# The IPA contains no ROM data. romassets_u.s is nothing but absolute cart
+# addresses, so the ROM is needed at build time only to convert the asset
+# sidecars, and it plus everything derived from it is deleted before publish.
 on:
   workflow_dispatch:
     inputs:
