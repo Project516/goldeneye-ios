@@ -586,7 +586,15 @@ void initializeGunBarrelIntro(u8 *gfxBuffer, s32 bufferSize)
     modelSetAnimPlaySpeed(chrModelInstance, S_7F008E80_ANIM_SPEED, 0.0f);
 #undef S_7F008E80_ANIM_SPEED
     
+#ifdef PORT
+    /* Same shape as ANIM_PTR: the table base is a real pointer, and
+     * &ANIM_DATA_x truncates to the record offset because g_pc_animdata_base
+     * is 4 GiB-aligned (D34). */
+    animation = (struct ModelAnimation *)((u8 *)ptr_animation_table
+                                          + (uintptr_t)(u32)(uintptr_t)&ANIM_DATA_bond_eye_walk);
+#else
     animation = (struct ModelAnimation*)((s32)ptr_animation_table + (s32)&ANIM_DATA_bond_eye_walk);
+#endif
     startframe = animation->unk04 - 0x44;
     while (startframe < 0)
     {

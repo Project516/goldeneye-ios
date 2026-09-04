@@ -5905,14 +5905,26 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
         size = ((u32) (frameSize + 15) >> 4) * 16;
 
         // This copies one animation frame from ROM to the destination in RAM
+#ifdef PORT
+        /* dest is a window offset, derived by truncating animBufferPtr2,
+         * which is exactly the N64 semantics. The DMA target has to be a real
+         * pointer though. source is a cart address and piServiceDma converts
+         * it already. */
+        romCopy(N64_TO_HOST(dest), (void *) source, size);
+#else
         romCopy((void* ) dest, (void* ) source, size);
+#endif
 
         // Increment this which serves nothing
         D_80036414->uselessPointer += 1;
 
         // Set this to point to the end of the copied frame
         // This allows to copy another frame after this one
+#ifdef PORT
+        D_80036414->animBufferPtr2 = (char *)N64_TO_HOST(dest + size);
+#else
         D_80036414->animBufferPtr2 = dest + size;
+#endif
     }
     return ret;
 }
