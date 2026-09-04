@@ -27,6 +27,13 @@
   #error "Unsupported platform"
 #endif
 
+/* Everything that is not Windows. The signal handlers, sigaction-based crash
+ * hooks and execinfo backtraces in port/src/crash.c are POSIX, not
+ * Linux-specific, so they key off this rather than PLATFORM_LINUX. */
+#if !defined(PLATFORM_WINDOWS)
+  #define PLATFORM_POSIX 1
+#endif
+
 #if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
   #define PLATFORM_64BIT 1
 #endif

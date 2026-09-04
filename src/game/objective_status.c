@@ -159,7 +159,9 @@ s32 get_difficulty_for_objective(s32 objectiveIndex)
 
 
 //horrible hack to get ai matching, but it does correctly refrence this func with 2 params
+#ifndef PORT
 #pragma weak    objectiveGetStatus_WEAK = get_status_of_objective
+#endif
 
 /*
  * Return Status of objective.
@@ -326,6 +328,19 @@ OBJECTIVESTATUS get_status_of_objective(s32 objectiveNum) //#MATCH
     }
     return status;
 }
+
+#ifdef PORT
+/* `#pragma weak name = target` is an ELF-only aliasing directive; Mach-O has
+ * no equivalent, so the alias the N64 build relies on is a real forwarding
+ * function here. chrai.c declares this with a second argument that the alias
+ * always discarded, and it is discarded the same way here, so the call site
+ * behaves identically. */
+s32 objectiveGetStatus_WEAK(s32 objectiveNum, s32 ignored)
+{
+    return get_status_of_objective(objectiveNum);
+}
+#endif
+
 
 
 

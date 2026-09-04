@@ -134,6 +134,13 @@ jobs:
               | sort | uniq -c | sort -rn | head -15 >> "$GITHUB_STEP_SUMMARY" || true
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             echo "Total errors: $(grep -c 'error:' build.log)" >> "$GITHUB_STEP_SUMMARY"
+            if grep -q "Undefined symbols" build.log; then
+              echo "Undefined symbols:" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              sed -n '/Undefined symbols/,/symbol(s) not found/p' build.log \
+                >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
           elif grep -q "Configuring done" configure.log; then
             echo "Configure succeeded." >> "$GITHUB_STEP_SUMMARY"
           else
@@ -142,3 +149,13 @@ jobs:
             grep -m1 -A6 -E "CMake Error|error:" configure.log >> "$GITHUB_STEP_SUMMARY" || true
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Fail if the build did not produce an app
+        run: |
+          APP=build-ios/Release-iphoneos/GoldenEye.app/GoldenEye
+          if [ ! -f "$APP" ]; then
+            echo "No binary at $APP. See the job summary for the errors." >&2
+            exit 1
+          fi
+          echo "Built $APP"
+          file "$APP"

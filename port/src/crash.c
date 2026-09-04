@@ -303,9 +303,11 @@ static LONG __stdcall crashHandler(PEXCEPTION_POINTERS exinfo)
     return EXCEPTION_CONTINUE_EXECUTION;
 }
 
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_POSIX)
 
+#if defined(PLATFORM_LINUX)
 #include <ucontext.h>
+#endif
 #include <signal.h>
 #include <execinfo.h>
 #include <unistd.h>
@@ -374,13 +376,15 @@ static void crashHandler(int sig, siginfo_t *siginfo, void *ctx)
 {
     char msg[CRASH_MAX_MSG + 1] = { 0 };
 
+    /* The faulting PC comes out of the signal context, whose layout is
+     * per-OS-and-arch. Where we cannot read it, leave it NULL and let
+     * crashStackTrace() print the top backtrace frame instead. */
     void *pc = NULL;
     if (ctx) {
-        ucontext_t *ucontext = (ucontext_t *)ctx;
-#ifdef PLATFORM_X86
-        pc = (void *)ucontext->uc_mcontext.gregs[REG_EIP];
-#elif defined(PLATFORM_X86_64)
-        pc = (void *)ucontext->uc_mcontext.gregs[REG_RIP];
+#if defined(PLATFORM_LINUX) && defined(PLATFORM_X86)
+        pc = (void *)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_EIP];
+#elif defined(PLATFORM_LINUX) && defined(PLATFORM_X86_64)
+        pc = (void *)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_RIP];
 #endif
     }
 
@@ -435,7 +439,7 @@ void crashDumpThreads(const unsigned long *tids, const char **names, int count)
     }
 }
 
-#endif /* PLATFORM_WINDOWS / PLATFORM_LINUX */
+#endif /* PLATFORM_WINDOWS / PLATFORM_POSIX */
 
 int g_CrashEnabled = 0;
 
@@ -445,7 +449,7 @@ void crashInit(void)
     SetErrorMode(SEM_FAILCRITICALERRORS);
     prevExFilter = SetUnhandledExceptionFilter(crashHandler);
     g_CrashEnabled = 1;
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_POSIX)
     struct sigaction sigact = { 0 };
     sigact.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sigact.sa_sigaction = crashHandler;
@@ -466,7 +470,7 @@ void crashShutdown(void)
     if (prevExFilter) {
         SetUnhandledExceptionFilter(prevExFilter);
     }
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_POSIX)
     sigaction(SIGSEGV, &prevSigAction, NULL);
     sigaction(SIGABRT, &prevSigAction, NULL);
     sigaction(SIGBUS,  &prevSigAction, NULL);
