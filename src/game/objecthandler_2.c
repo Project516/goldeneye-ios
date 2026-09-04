@@ -99,7 +99,20 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
 
         name = (u8 *) (((s32) (((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff))) - filedata);
 
+#ifdef PORT
+        /* D197: filedata is a truncated (s32)objheader->Switches. fileSetSize
+         * forwards this to mempAddEntryOfSizeToBank, which compares it against
+         * the pool's real prevpos pointer to decide whether it may resize the
+         * last allocation. A truncated value never matches, so the resize is
+         * silently skipped and MEMPOOL_STAGE keeps the whole-bank allocation
+         * that fileIndexLoadToBank took to decompress into. The next request
+         * then hits the decomp's deliberate OOM `while (1);` in
+         * mempAllocBytesInBank. Pass the pointer Switches already is; the size
+         * argument is a length, not an address, and is unchanged. */
+        fileSetSize(filenum, (u8 *) objheader->Switches, (((s32) name + 0xf) & (~0xf)), dst == 0);
+#else
         fileSetSize(filenum, (u8 *) filedata, (((s32) name + 0xf) & (~0xf)), dst == 0);
+#endif
     }
 }
 

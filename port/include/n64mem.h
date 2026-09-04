@@ -50,6 +50,13 @@ int n64memContains(uintptr_t p, size_t len);
  * a DMA source do not need this: piServiceDma converts them already. */
 #define CART_HOSTPTR(type, sym) ((type)N64_TO_HOST((uintptr_t)&(sym)))
 
+/* D177: the decomp's `(T *)((s32)ptr + byteOffset)` idiom is a no-op cast on
+ * the N64's 32-bit pointers but truncates a 64-bit address on PC, so the write
+ * lands somewhere else entirely. uintptr_t reproduces the arithmetic exactly
+ * at either pointer width; layout-only, no behavior change. Used by the game
+ * files that walk ROM-serialized records (stan.c, bondview_r.c). */
+#define PORT_PTRADD(type, base, off) ((type)((uintptr_t)(base) + (uintptr_t)(off)))
+
 /* An N64 address as a host pointer, and back. */
 #define N64_TO_HOST(v)   ((void *)(g_n64Base + (uintptr_t)(uint32_t)(v)))
 #define N64_FROM_HOST(p) ((uint32_t)(uintptr_t)(p))

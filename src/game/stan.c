@@ -13,12 +13,7 @@
 #ifdef PORT
 #include <stdio.h>
 #include <stdint.h>
-/* D177: the decomp's `(coord3d *)((s32)ptr + byteOffset)` idiom is a no-op
- * cast on the N64's 32-bit pointers but truncates a 64-bit stack address on
- * PC (the high half is lost -> writes land on a garbage address -> AV).
- * uintptr_t reproduces the arithmetic exactly at either pointer width;
- * layout-only, no behaviour change. */
-#define PORT_PTRADD(type, base, off) ((type)((uintptr_t)(base) + (uintptr_t)(off)))
+/* PORT_PTRADD comes from n64mem.h. */
 #else
 #define PORT_PTRADD(type, base, off) ((type)((s32)(base) + (off)))
 #endif

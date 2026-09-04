@@ -1,3 +1,8 @@
+#ifdef PORT
+#include "n64mem.h"   /* PORT_PTRADD */
+#else
+#define PORT_PTRADD(type, base, off) ((type)((s32)(base) + (off)))
+#endif
 #include <ultra64.h>
 #ifdef PORT
 #include <stdio.h>
@@ -189,7 +194,7 @@ void bondviewLoadSetupIntroSection(void)
                         startpadcount++;
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSpawn));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroSpawn));
                 }
                 break;
 
@@ -226,7 +231,7 @@ void bondviewLoadSetupIntroSection(void)
                         }
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroItem));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroItem));
                 }
                 break;
 
@@ -237,7 +242,7 @@ void bondviewLoadSetupIntroSection(void)
                         give_cur_player_ammo(((struct SetupIntroAmmo*)intro_record)->ammo_type, ((struct SetupIntroAmmo*)intro_record)->ammo_amount);
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAmmo));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroAmmo));
                 }
                 break;
 
@@ -256,7 +261,7 @@ void bondviewLoadSetupIntroSection(void)
                     intro_swirl->unk14.fval = intro_swirl->unk14.ival / M_U16_MAX_VALUE_F;
                     intro_swirl->unk18.fval = intro_swirl->unk18.ival / M_U16_MAX_VALUE_F;
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSwirl));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroSwirl));
                 }
                 break;
 
@@ -264,7 +269,7 @@ void bondviewLoadSetupIntroSection(void)
                 {
                     g_IntroAnimationIndex = ((struct SetupIntroAnim*)intro_record)->intro_anim;
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAnim));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroAnim));
                 }
                 break;
 
@@ -272,7 +277,7 @@ void bondviewLoadSetupIntroSection(void)
                 {
                     g_CurrentPlayer->bondtype = ((struct SetupIntroCuff*)intro_record)->bondtype;
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCuff));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroCuff));
                 }
                 break;
 
@@ -311,7 +316,7 @@ void bondviewLoadSetupIntroSection(void)
                         }
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCamera));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroCamera));
                 }
                 break;
 
@@ -333,7 +338,7 @@ void bondviewLoadSetupIntroSection(void)
 
                     if (watch_time_0);
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroWatch));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroWatch));
                 }
                 break;
 
@@ -351,7 +356,7 @@ void bondviewLoadSetupIntroSection(void)
                         credits++;
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCredits));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroCredits));
                 }
                 break;
 
@@ -360,7 +365,7 @@ void bondviewLoadSetupIntroSection(void)
                     #ifdef DEBUG
                         ossyncprintf("unknown bondstart type %d!\n",intro_record->type);
                     #endif
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroEmpty));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroEmpty));
                 }
                 break;
 

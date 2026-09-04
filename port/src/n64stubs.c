@@ -100,11 +100,19 @@ u8 (*tlbmanageGetTlbAllocatedBlock(void))[TLB_BLOCK_SIZE]
      * fits — MEMPOOL_STAGE OOMs (zbufAllocate spins in mempAllocBytesInBank).
      * There is ~5 MB of live, mapped, otherwise-unused DRAM between the N64
      * ceiling and the top of the 8 MB region (only animations_frame_buffer
-     * lives up there, at 0x707FFD30). Reclaim ~4 MB of it for the mempool
+     * lives up there, at 0x707FFD30). Reclaim all of it for the mempool
      * area; the extra goes to MEMPOOL_STAGE (boss.c:218 gives STAGE
-     * everything that isn't the fixed PERMANENT bank). Stays well clear of
-     * animations_frame_buffer. */
-    return (u8 (*)[TLB_BLOCK_SIZE])N64_TO_HOST(0x70700000u);
+     * everything that isn't the fixed PERMANENT bank).
+     *
+     * D197: 0x70700000 was still not enough for BUNKER1. Its prop setup
+     * filled STAGE exactly (pos == end, 0x658000 used) and mempAllocBytesInBank
+     * hit the decomp's deliberate `while (1);` OOM path (memp.c:229) while
+     * instantiating a monitor model, so -level_09 spun forever having rendered
+     * nothing. Raised to leave only animations_frame_buffer above; DRAM is
+     * committed through 0x70800000 (dram.c DRAM_SIZE), so this is all live
+     * memory. Growing past the 8 MB region would mean widening DRAM_SIZE and
+     * its K0 alias, which is the next lever if a level still does not fit. */
+    return (u8 (*)[TLB_BLOCK_SIZE])N64_TO_HOST(0x707F0000u);
 }
 
 /* --- K&R libc helpers (IDO provided these; MinGW's libc does not) -------- */
