@@ -42,6 +42,14 @@ if(NOT DEFINED CMAKE_C_COMPILER AND NOT TARGET_IOS)
   endif()
 endif()
 
+if(APPLE)
+  # Darwin's <string.h> defines strcpy and friends as fortified macros
+  # (__builtin___strcpy_chk). src/str.h then redeclares them as functions and
+  # the macro expansion fails to parse. The decomp provides its own
+  # implementations anyway, so the fortified wrappers have nothing to add.
+  add_compile_definitions(_FORTIFY_SOURCE=0)
+endif()
+
 if(TARGET_IOS)
   if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "" FORCE)
