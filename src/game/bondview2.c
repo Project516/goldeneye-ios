@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #endif
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <math.h>
 #include <bondtypes.h>
 #include <boss.h>
@@ -8165,6 +8168,22 @@ void store_BONDdata_curpos_to_previous(void) {
 /**
  * Address: 7F0876C4
  */
+/* D197: player fields 0x5C/0x60/0x64/0x68 hold matrix addresses in an s32,
+ * the N64 struct layout, so storing a dynAllocateMatrix() result truncates it
+ * and casting it straight back dereferences the low half. The window's low 32
+ * bits are the N64 address, so putting the base back recovers the pointer
+ * exactly. Store as the struct says, convert at the use site (the PD
+ * ground-truth pattern, see findings.md D3x).
+ *
+ * Only where the CPU dereferences the value. A gSPMatrix argument must stay
+ * the truncated N64 address, because that is what the display list carries and
+ * what fast3d's seg_addr resolves. */
+#ifdef PORT
+#define PORT_HOSTP(type, field) ((type)N64_TO_HOST((u32)(field)))
+#else
+#define PORT_HOSTP(type, field) ((type)(field))
+#endif
+
 void bondviewUpdateCameraMatrices(coord3d* cam_pos, coord3d* cam_look_dir, coord3d* cam_up)
 {
     Mtx sp108;
@@ -8209,12 +8228,12 @@ void bondviewUpdateCameraMatrices(coord3d* cam_pos, coord3d* cam_look_dir, coord
         clpos.x, clpos.y, clpos.z,
         cam_up->x, cam_up->y, cam_up->z);
 
-    matrix_4x4_set_lookat((Mtxf*) g_CurrentPlayer->field_64,
+    matrix_4x4_set_lookat(PORT_HOSTP(Mtxf *, g_CurrentPlayer->field_64),
         cam_pos->x, cam_pos->y, cam_pos->z,
         cam_look_dir->x, cam_look_dir->y, cam_look_dir->z,
         cam_up->x, cam_up->y, cam_up->z);
 
-    matrix_4x4_set_basis_and_position((Mtxf*) g_CurrentPlayer->field_68,
+    matrix_4x4_set_basis_and_position(PORT_HOSTP(Mtxf *, g_CurrentPlayer->field_68),
         cam_pos->x, cam_pos->y, cam_pos->z,
         cam_look_dir->x, cam_look_dir->y, cam_look_dir->z,
         cam_up->x, cam_up->y, cam_up->z);
@@ -8245,13 +8264,14 @@ void bondviewUpdateCameraMatrices(coord3d* cam_pos, coord3d* cam_look_dir, coord
     scale = bgGetLevelVisibilityScale();
 
     matrix_scalar_multiply(scale, spC4.m[0]);
-    guMtxF2L((f32 (*)[4]) &spC4, (Mtx* ) g_CurrentPlayer->field_5C);
-    sub_GAME_7F059334((s32* ) g_CurrentPlayer->field_5C, (s32* ) g_CurrentPlayer->field_60);
+    guMtxF2L((f32 (*)[4]) &spC4, PORT_HOSTP(Mtx *, g_CurrentPlayer->field_5C));
+    sub_GAME_7F059334(PORT_HOSTP(s32 *, g_CurrentPlayer->field_5C),
+                      PORT_HOSTP(s32 *, g_CurrentPlayer->field_60));
 
-    currentPlayerSetMatrix10C8((Mtx* ) g_CurrentPlayer->field_5C);
-    currentPlayerSetMatrix10C4((Mtx* ) g_CurrentPlayer->field_60);
-    currentPlayerSetMatrix10CC((Mtxf* ) g_CurrentPlayer->field_64);
-    currentPlayerSetViewToWorldMtxf((Mtxf* ) g_CurrentPlayer->field_68);
+    currentPlayerSetMatrix10C8(PORT_HOSTP(Mtx *, g_CurrentPlayer->field_5C));
+    currentPlayerSetMatrix10C4(PORT_HOSTP(Mtx *, g_CurrentPlayer->field_60));
+    currentPlayerSetMatrix10CC(PORT_HOSTP(Mtxf *, g_CurrentPlayer->field_64));
+    currentPlayerSetViewToWorldMtxf(PORT_HOSTP(Mtxf *, g_CurrentPlayer->field_68));
 
     sub_GAME_7F078464((s32) lookat);
     bondviewUpdateFrustumPlanes();

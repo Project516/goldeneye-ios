@@ -1,9 +1,9 @@
+#include <ultra64.h>
 #ifdef PORT
 #include "n64mem.h"   /* PORT_PTRADD */
 #else
 #define PORT_PTRADD(type, base, off) ((type)((s32)(base) + (off)))
 #endif
-#include <ultra64.h>
 #ifdef PORT
 #include <stdio.h>
 #include <stdlib.h>

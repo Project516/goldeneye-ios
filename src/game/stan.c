@@ -1,7 +1,7 @@
+#include <ultra64.h>
 #ifdef PORT
 #include "n64mem.h"
 #endif
-#include <ultra64.h>
 //#include <bondtypes.h>
 #include <deb.h>
 #include "stan.h"

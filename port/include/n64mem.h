@@ -19,8 +19,25 @@
 #ifndef PORT_N64MEM_H
 #define PORT_N64MEM_H
 
+/* No <stddef.h> / <stdint.h> here. Game TUs include this header, and pulling
+ * the host C headers in ahead of <ultra64.h> silently changed something
+ * layout-relevant in bondview2.c: the front end then crashed in
+ * bgApplyDynamicCCRMLUT, nowhere near the change. The compiler's own type
+ * macros need no header at all, so the hazard cannot come back. Same trick
+ * port/shim/stddef.h uses on Linux. */
+#if defined(_MSC_VER)
 #include <stddef.h>
 #include <stdint.h>
+#define N64MEM_UINTPTR uintptr_t
+#define N64MEM_U64     uint64_t
+#define N64MEM_U32     uint32_t
+#define N64MEM_SIZE    size_t
+#else
+#define N64MEM_UINTPTR __UINTPTR_TYPE__
+#define N64MEM_U64     __UINT64_TYPE__
+#define N64MEM_U32     __UINT32_TYPE__
+#define N64MEM_SIZE    __SIZE_TYPE__
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,36 +47,37 @@ extern "C" {
 #define N64_WINDOW_SPAN 0x88000000ULL
 
 /* Base of the window. Zero means identity mapping (Windows). */
-extern uintptr_t g_n64Base;
+extern N64MEM_UINTPTR g_n64Base;
 
 /* Reserve the window. Call once, before anything maps into it. */
 void n64memReserve(void);
 
 /* Commit len bytes at N64 offset off, read/write. Returns the host pointer. */
-void *n64memCommit(uint64_t off, size_t len);
+void *n64memCommit(N64MEM_U64 off, N64MEM_SIZE len);
 
 /* Make dstOff show the same pages as srcOff, which must already be committed. */
-void *n64memAlias(uint64_t srcOff, uint64_t dstOff, size_t len);
+void *n64memAlias(N64MEM_U64 srcOff, N64MEM_U64 dstOff, N64MEM_SIZE len);
 
 /* True if [p, p+len) lies inside the window. The DMA gate uses this. */
-int n64memContains(uintptr_t p, size_t len);
+int n64memContains(N64MEM_UINTPTR p, N64MEM_SIZE len);
 
 /* Read through an absolute cart symbol from romassets_<region>.s. Those
  * symbols hold N64 cart addresses, not host pointers, so taking one and
  * dereferencing it needs the window base put back first. Symbols used only as
  * a DMA source do not need this: piServiceDma converts them already. */
-#define CART_HOSTPTR(type, sym) ((type)N64_TO_HOST((uintptr_t)&(sym)))
+#define CART_HOSTPTR(type, sym) ((type)N64_TO_HOST((N64MEM_UINTPTR)&(sym)))
 
 /* D177: the decomp's `(T *)((s32)ptr + byteOffset)` idiom is a no-op cast on
  * the N64's 32-bit pointers but truncates a 64-bit address on PC, so the write
  * lands somewhere else entirely. uintptr_t reproduces the arithmetic exactly
  * at either pointer width; layout-only, no behavior change. Used by the game
  * files that walk ROM-serialized records (stan.c, bondview_r.c). */
-#define PORT_PTRADD(type, base, off) ((type)((uintptr_t)(base) + (uintptr_t)(off)))
+#define PORT_PTRADD(type, base, off) \
+    ((type)((N64MEM_UINTPTR)(base) + (N64MEM_UINTPTR)(off)))
 
 /* An N64 address as a host pointer, and back. */
-#define N64_TO_HOST(v)   ((void *)(g_n64Base + (uintptr_t)(uint32_t)(v)))
-#define N64_FROM_HOST(p) ((uint32_t)(uintptr_t)(p))
+#define N64_TO_HOST(v)   ((void *)(g_n64Base + (N64MEM_UINTPTR)(N64MEM_U32)(v)))
+#define N64_FROM_HOST(p) ((N64MEM_U32)(N64MEM_UINTPTR)(p))
 
 #ifdef __cplusplus
 }
