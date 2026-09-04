@@ -444,11 +444,16 @@ endif()
 # Attached per source file rather than with a COMPILE_LANGUAGE genex, because
 # the Xcode generator does not reliably turn a genex-guarded -I into a
 # per-language header search path. See PORT_CXX_STDLIB_DIR use below.
+# The SDK path clang prints in its diagnostics is virtual: Xcode mounts the
+# toolchain's c++/v1 into the SDK with a VFS overlay, so
+# <sdk>/usr/include/c++/v1 does not exist on disk and IS_DIRECTORY says no.
+# The compiler's own directory is the reliable anchor.
 set(PORT_CXX_STDLIB_DIR "")
 if(APPLE)
+  get_filename_component(_cxxbin "${CMAKE_CXX_COMPILER}" DIRECTORY)
   foreach(_c
-      "${CMAKE_OSX_SYSROOT}/usr/include/c++/v1"
-      "${CMAKE_OSX_SYSROOT}/../../../Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1")
+      "${_cxxbin}/../include/c++/v1"
+      "${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
     get_filename_component(_c "${_c}" ABSOLUTE)
     if(NOT PORT_CXX_STDLIB_DIR AND IS_DIRECTORY "${_c}")
       set(PORT_CXX_STDLIB_DIR "${_c}")
@@ -458,8 +463,9 @@ if(APPLE)
     message(STATUS "libc++ headers: ${PORT_CXX_STDLIB_DIR}")
   else()
     message(WARNING
-      "No libc++ headers found under ${CMAKE_OSX_SYSROOT}; the C++ TUs will "
-      "resolve <cstddef> and friends against the decomp's N64 headers")
+      "No libc++ headers found next to ${CMAKE_CXX_COMPILER} or under "
+      "${CMAKE_OSX_SYSROOT}; the C++ TUs will resolve <cstddef> and friends "
+      "against the decomp's N64 headers")
   endif()
 endif()
 
