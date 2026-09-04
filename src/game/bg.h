@@ -20,7 +20,14 @@ struct levelentry
 // cannonical name
 #define PORTMAX 200
 
+#ifdef PORT
+/* base and off are N64 addresses, and the 0xF1000000 wraps the segment tag
+ * away, so the sum is an N64 address that still needs the window base. */
+#include "n64mem.h"
+#define BG_SEG_TO_PTR(base, off) (N64_TO_HOST(((u32) (base)) + (((u32) (off)) + 0xF1000000)))
+#else
 #define BG_SEG_TO_PTR(base, off) ((void *) (((u32) (base)) + (((u32) (off)) + 0xF1000000)))
+#endif
 
 typedef struct RoomVtxBatchBounds {
     s16 gdlindex;    // 0x00

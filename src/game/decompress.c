@@ -69,16 +69,9 @@ u32 decompressdata(u8 *src, u8 *dst, struct huft *huffman_table)
 }
 
 
-#ifdef PORT
-/* rz_inbuf is a real pointer; returning it as s32 drops the window base. */
-u8 *rzipGetSomething(void) {
-    return (rz_inbuf + rz_inptr);
-}
-#else
 s32 rzipGetSomething(void) {
     return (rz_inbuf + rz_inptr);
 }
-#endif
 
 
 

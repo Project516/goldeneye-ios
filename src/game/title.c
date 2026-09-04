@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <PR/gbi.h>
 #include <PR/gu.h>
@@ -671,7 +674,7 @@ Gfx *renderGunbarrelEyeIntroSequence (Gfx *gdl) {
         static int n = 0;
         if ((++n % 200) == 1)
             osSyncPrintf("D63 gb-render call #%d mode=%d slot=%08x\n",
-                         n, (int)gunbarrel_mode, *(const u32 *)0x7012EC38);
+                         n, (int)gunbarrel_mode, *(const u32 *)N64_TO_HOST(0x7012EC38u));
     }
 #endif
     D_8002A7D0 = (1 - D_8002A7D0);

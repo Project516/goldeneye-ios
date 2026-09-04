@@ -60,7 +60,9 @@ u32 decompressdata(u8 *src, u8 *dst, struct huft *huffman_table)
     return produced;
 }
 
-s32 rzipGetSomething(void)
+/* Returns a real pointer: texSetBitstring feeds it straight to img_curpos,
+ * and (s32) dropped the high half once DRAM moved into the window. */
+u8 *rzipGetSomething(void)
 {
-    return (s32)(uintptr_t)s_rz_nextin;
+    return (u8 *)s_rz_nextin;
 }

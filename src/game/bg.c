@@ -855,17 +855,17 @@ void load_bg_file(LEVEL_INDEX levelid)
     lightFixtureInitTables();
  
     ptr_bg_data = (s32)header;
-    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) ptr_bg_data, 0, 0x40);
+    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) N64_TO_HOST(ptr_bg_data), 0, 0x40);
 
     if (((levelid && ptr_bg_data) && levelentry_index));
 
     ptr_bgdata_offsets = ptr_bg_data;
-    ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *)ptr_bg_data)[1]);
+    ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *)N64_TO_HOST(ptr_bg_data))[1]);
  
     size = (((((u32) ptr_bgdata_room_fileposition_list[1].pPointTableBin) & 0x00ffffff) - 1) | 0xf) + 1;
  
     ptr_bg_data = (s32) mempAllocBytesInBank(size, 4);
-    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) ptr_bg_data, 0, size);
+    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) N64_TO_HOST(ptr_bg_data), 0, size);
  
     gptr_stan = (s32) _fileNameLoadToBank(levelinfotable[levelentry_index].bg_stan_filename, 2, 0, 4);
  
@@ -882,7 +882,7 @@ void load_bg_file(LEVEL_INDEX levelid)
     sub_GAME_7F08976C(mCurrentLevelVisibilityScale);
     matrix_4x4_7F058C4C(mCurrentLevelVisibilityScale);
  
-    data = (s32 *)ptr_bg_data;
+    data = (s32 *)N64_TO_HOST(ptr_bg_data);
     dword_CODE_bss_8007BF98 = *data;
     dword_CODE_bss_8007FF88 = 1;
  
