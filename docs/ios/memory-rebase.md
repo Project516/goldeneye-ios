@@ -269,7 +269,31 @@ libc++ include dir ahead of the decomp's `include/` for those files only.
 After that the renderer is next: `port/fast3d/gfx_opengl.cpp` is desktop
 GL 3.3 and iOS has no desktop GL.
 
-## REGRESSION, fix this first
+## A regression worth remembering
+
+`ffb9b76` moved the thread stacks from window offset `0x20000000` to
+`0x30000000` and broke the front end. It is reverted.
+
+The move was defensive and the reasoning behind it was simply wrong. It said
+stacks must avoid `0x20000000` because the Linux image links there, but that
+conflates two address spaces: the image sits at `0x20000000` in the host's own
+space, not at window offset `0x20000000`. Nothing collided.
+
+`0x30000000` is actively worse. `seg_addr` treats an odd `w1` as a segmented
+address and takes the segment index from bits 24-27, so a truncated stack
+pointer at `0x3xxxxxxx` selects `segmentPointers[3]` and returns garbage. The
+symptom was `gfx_run_dl` faulting on a nested `G_DL` target.
+
+Two lessons, both mine:
+
+- The change was committed on the strength of a `-level_09` run, which skips
+  the front end. The front-end run that passed predated it. Verify the path a
+  change can plausibly affect, not the path that happens to be handy.
+- It was a fix for a problem that had never been observed, reasoned from a
+  comment rather than from a failure. The comment was about the image base and
+  did not apply.
+
+## Original regression note, kept for the bisect recipe
 
 The Linux build crashes on startup as of `b3c5402`. A clean build reaches one
 VI post and dies in `gfx_run_dl` (`port/fast3d/gfx_pc.cpp:2679`, the

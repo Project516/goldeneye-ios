@@ -353,14 +353,16 @@ void osCreateThread(OSThread *t, OSId id, void (*entry)(void *), void *arg,
  * This replaces MAP_32BIT, which only ever existed on Linux and which Darwin
  * does not have at all. The stacks sit in the gap between the cart image and
  * the DRAM views. Verified on device by the suite C probe. */
-/* 0x30000000 rather than 0x20000000: the Linux image is linked at 0x20000000,
- * and a game display list can embed &symbol truncated to u32 by the
- * osVirtualToPhysical shim. seg_addr's fallthrough then resolves 0x20xxxxxx
- * against the window, so stacks must not live where those land. This range is
- * clear of the cart (0x10000000), the image (0x20000000), seg_addr's D131
- * module range (0x40000000 to 0x70000000) and DRAM (0x70000000 up). */
-#define PORT_STACK_REGION 0x30000000ULL
-#define PORT_STACK_LIMIT  0x40000000ULL
+/* Do not move this to 0x30000000. That was tried and it breaks the front end:
+ * seg_addr treats an odd w1 as segmented and takes the segment from bits
+ * 24-27, so a truncated stack pointer at 0x3xxxxxxx resolves against
+ * segmentPointers[3] and returns garbage for a nested display list. The
+ * reasoning for moving it (the Linux image is linked at 0x20000000, so
+ * truncated image symbols land here) confused two different address spaces:
+ * the image lives at 0x20000000 in the host's own space, not at window offset
+ * 0x20000000. */
+#define PORT_STACK_REGION 0x20000000ULL
+#define PORT_STACK_LIMIT  0x30000000ULL
 
 static pthread_mutex_t s_stackLock = PTHREAD_MUTEX_INITIALIZER;
 static uint64_t s_stackNext = PORT_STACK_REGION;
