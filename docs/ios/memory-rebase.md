@@ -84,3 +84,35 @@ rebase.
 `port/src/libultra.c:350` `portAllocLowStack` is a second sub-4 GB
 dependency. Its `MAP_32BIT` branch is a no-op on Darwin, so stacks must be
 committed inside the window instead.
+
+## The cart side is cheaper, for a non-obvious reason
+
+`port/src/romassets_<region>.s` defines **1685** absolute symbols covering
+every obseg/ramrom/music blob, e.g.
+
+    .global bg_silo_all_p_seg
+    .set    bg_silo_all_p_seg, 0x10449450
+
+At first glance these look like the same ADRP problem as `dram_syms.s`. They
+are not, and the difference is what a reference compiles into:
+
+- **Code** referencing an absolute symbol becomes `ADRP` + `ADD`, which reaches
+  only +/-4 GB from the PC. That is what kills the three DRAM symbols.
+- **Data** holding one, a pointer field in a static array, is just a 64-bit
+  constant with a data relocation. No range limit, so it links fine on arm64.
+
+Every one of the 1685 is consumed as data. `assets/obseg/obseg.h` declares them
+`extern u8 name[]`, and the single consumer is the static table in
+`assets/obseg/file_resource_table.inc.c`:
+
+    {BG_SILO_ALL_P, "bg/bg_silo_all_p.seg", &bg_silo_all_p_seg},
+
+which `src/game/ob.c:29` includes. No code dereferences these symbols directly.
+
+So the addresses land in the binary as plain constants and only have to be
+corrected once, at runtime. `obInit()` (`src/game/ob.c:120`) already walks the
+whole table and already has a `#ifdef PORT` hook at the end calling
+`pcmodelsPatchTable()` / `pccgPatchTable()`. Adding `W` to each `hw_address`
+belongs in that same pass.
+
+That means the cart rebase is one loop over an existing table, not 1685 edits.
