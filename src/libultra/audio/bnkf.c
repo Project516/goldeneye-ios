@@ -22,14 +22,21 @@
 #include <os.h>
 #include <ultraerror.h>
 
+#ifdef PORT
+/* Pointer-width on the port; the N64 build keeps the original s32. */
+typedef intptr_t BNKF_OFS;
+#else
+typedef s32 BNKF_OFS;
+#endif
+
 /*
  * ### when the file format settles down a little, I'll remove these
  * ### for efficiency.
  */
-static  void _bnkfPatchBank(ALBank *bank, s32 offset, s32 table);
-static  void _bnkfPatchInst(ALInstrument *i, s32 offset, s32 table);
-static  void _bnkfPatchSound(ALSound *s, s32 offset, s32 table);
-static  void _bnkfPatchWaveTable(ALWaveTable *w, s32 offset, s32 table);
+static  void _bnkfPatchBank(ALBank *bank, BNKF_OFS offset, BNKF_OFS table);
+static  void _bnkfPatchInst(ALInstrument *i, BNKF_OFS offset, BNKF_OFS table);
+static  void _bnkfPatchSound(ALSound *s, BNKF_OFS offset, BNKF_OFS table);
+static  void _bnkfPatchWaveTable(ALWaveTable *w, BNKF_OFS offset, BNKF_OFS table);
 
 void alSeqFileNew(ALSeqFile *file, u8 *base)
 {
@@ -46,8 +53,10 @@ void alSeqFileNew(ALSeqFile *file, u8 *base)
 
 void alBnkfNew(ALBankFile *file, u8 *table)
 {
-    s32 offset = (s32) file;
-    s32 woffset = (s32) table;
+    /* offset and table are host base pointers, added to the 32-bit offsets
+     * stored in the bank file. Truncating them to s32 loses the window base. */
+    BNKF_OFS offset = (BNKF_OFS) file;
+    BNKF_OFS woffset = (BNKF_OFS) table;
     
     s32 i;
     
@@ -66,7 +75,7 @@ void alBnkfNew(ALBankFile *file, u8 *table)
     }
 }
 
-void _bnkfPatchBank(ALBank *bank, s32 offset, s32 table) 
+void _bnkfPatchBank(ALBank *bank, BNKF_OFS offset, BNKF_OFS table) 
 {
     s32 i;
     
@@ -88,7 +97,7 @@ void _bnkfPatchBank(ALBank *bank, s32 offset, s32 table)
     }
 }
 
-void _bnkfPatchInst(ALInstrument *inst, s32 offset, s32 table)
+void _bnkfPatchInst(ALInstrument *inst, BNKF_OFS offset, BNKF_OFS table)
 {
     s32 i;
 
@@ -105,7 +114,7 @@ void _bnkfPatchInst(ALInstrument *inst, s32 offset, s32 table)
     }
 }
 
-void _bnkfPatchSound(ALSound *s, s32 offset, s32 table)
+void _bnkfPatchSound(ALSound *s, BNKF_OFS offset, BNKF_OFS table)
 {
     if (s->flags)
         return;
@@ -119,7 +128,7 @@ void _bnkfPatchSound(ALSound *s, s32 offset, s32 table)
     _bnkfPatchWaveTable(s->wavetable, offset, table);
 }
 
-void _bnkfPatchWaveTable(ALWaveTable *w, s32 offset, s32 table)
+void _bnkfPatchWaveTable(ALWaveTable *w, BNKF_OFS offset, BNKF_OFS table)
 {
     if (w->flags)
         return;

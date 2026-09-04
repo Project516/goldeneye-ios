@@ -613,6 +613,15 @@ s16 *g_sndSfxSlotVolume;
  */
 u16 *g_sndSfxSlotNaturalVolume;
 
+#ifdef PORT
+/* These are absolute cart addresses from romassets_<region>.s, not host
+ * pointers. Reading through one means putting the window base back first. */
+#include "n64mem.h"
+#define CART_HOSTPTR(type, sym) ((type)N64_TO_HOST((uintptr_t)&(sym)))
+#else
+#define CART_HOSTPTR(type, sym) ((type)&(sym))
+#endif
+
 extern u32 _sfxtblSegmentRomStart;
 extern u32 _sfxctlSegmentRomStart;
 extern u32 _instrumentstblSegmentRomStart;
@@ -691,7 +700,7 @@ void musicSeqPlayerInit(void)
         // re-laid-out size, copy only the ROM bytes, then convert.
         {
             u32 romSize = size;
-            size = romdataAudioBankPcSize((const u8 *)&_sfxctlSegmentRomStart, size);
+            size = romdataAudioBankPcSize(CART_HOSTPTR(const u8 *, _sfxctlSegmentRomStart), size);
             sfxBank = alHeapAlloc(&g_musicHeap, 1, size);
             romCopy(sfxBank, &_sfxctlSegmentRomStart, romSize);
             romdataFixupAudioBank(sfxBank, romSize, size);
@@ -700,7 +709,7 @@ void musicSeqPlayerInit(void)
         sfxBank = alHeapAlloc(&g_musicHeap, 1, size);
         romCopy(sfxBank, &_sfxctlSegmentRomStart, size);
 #endif
-        alBnkfNew(sfxBank, (u8 *)&_sfxtblSegmentRomStart);
+        alBnkfNew(sfxBank, CART_HOSTPTR(u8 *, _sfxtblSegmentRomStart));
         g_musicSfxBufferPtr = sfxBank->bankArray[0];
     }
 
@@ -712,7 +721,7 @@ void musicSeqPlayerInit(void)
         // D37: as above.
         {
             u32 romSize = size;
-            size = romdataAudioBankPcSize((const u8 *)&_instrumentsctlSegmentRomStart, size);
+            size = romdataAudioBankPcSize(CART_HOSTPTR(const u8 *, _instrumentsctlSegmentRomStart), size);
             instrumentBank = alHeapAlloc(&g_musicHeap, 1, size);
             romCopy(instrumentBank, &_instrumentsctlSegmentRomStart, romSize);
             romdataFixupAudioBank(instrumentBank, romSize, size);
@@ -721,7 +730,7 @@ void musicSeqPlayerInit(void)
         instrumentBank = alHeapAlloc(&g_musicHeap, 1, size);
         romCopy(instrumentBank, &_instrumentsctlSegmentRomStart, size);
 #endif
-        alBnkfNew(instrumentBank, (u8 *)&_instrumentstblSegmentRomStart);
+        alBnkfNew(instrumentBank, CART_HOSTPTR(u8 *, _instrumentstblSegmentRomStart));
         g_musicInstrumentBufferPtr = instrumentBank->bankArray[0];
     }
 

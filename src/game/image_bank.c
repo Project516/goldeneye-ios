@@ -242,7 +242,13 @@ void texReset(void)
 
     size = (u32)&_GlobalimagetableSegmentEnd - (u32)&_GlobalimagetableSegmentStart;
     pGlobalimagetable = mempAllocBytesInBank(size + 0x1000, MEMPOOL_STAGE);
+#ifdef PORT
+    /* Round up to 4K without dropping the high half of a real allocation. */
+    pGlobalimagetable = (s32 *)(((uintptr_t)pGlobalimagetable + 0xFFFu)
+                                & ~(uintptr_t)0xFFFu);
+#else
     pGlobalimagetable = ((u32)pGlobalimagetable + 0xFFFU) & 0xFFFFF000;
+#endif
 
     romCopy(pGlobalimagetable, &_GlobalimagetableSegmentRomStart, size);
 

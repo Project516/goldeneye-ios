@@ -213,8 +213,17 @@ s32 initResolveAnimTable(struct StruckAnim *entries)
 }
 
 
+#ifdef PORT
+/* &ANIM_DATA_x is an address-only lvalue over the 4 GiB-aligned
+ * g_pc_animdata_base, so truncating it gives the record's offset (D34). The
+ * table base is a real pointer, though, so add the offset to it rather than
+ * truncating both and casting the sum. */
+#define ANIM_PTR(anim) \
+    ((ModelAnimation *)((u8 *)ptr_animation_table + (uintptr_t)(u32)(uintptr_t)&(anim)))
+#else
 #define ANIM_PTR(anim) \
     ((ModelAnimation *)((s32)&anim + ((s32)ptr_animation_table)))
+#endif
 
 #define ANIM_FRAC(anim) \
     ((((f32)sub_GAME_7F000290(ANIM_PTR(anim), 0, ANIM_PTR(anim)->unk04 - 1)) * 0.10000001f) / \
