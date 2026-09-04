@@ -203,6 +203,17 @@ static void portHeartbeatCheck(void)
         for (int i = 0; i < g_pqCount; ++i) {
             OSMesgQueue *mq = g_pq[i].os;
             if (!mq) continue;
+            /* Registry entries are keyed on the OSMesgQueue address and are
+             * never removed, so a queue that lived on a stack frame leaves a
+             * slot pointing at memory that has since been reused. Reading it
+             * yields counts that are not counts. Say so instead of printing
+             * them, because during a hang they read like a lead. */
+            if (mq->msgCount <= 0 || mq->msgCount > 1024 ||
+                mq->validCount < 0 || mq->validCount > mq->msgCount) {
+                sysLogPrintf(LOG_ERROR,
+                    "  mq=%p <implausible counts, treat as stale>", (void *)mq);
+                continue;
+            }
             sysLogPrintf(LOG_ERROR,
                 "  mq=%p valid=%d/%d first=%d",
                 (void *)mq, mq->validCount, mq->msgCount, mq->first);
