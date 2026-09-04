@@ -116,3 +116,43 @@ whole table and already has a `#ifdef PORT` hook at the end calling
 belongs in that same pass.
 
 That means the cart rebase is one loop over an existing table, not 1685 edits.
+
+## DMA destination audit
+
+28 compiled call sites reach `piServiceDma`: 26 via `romCopy()` and 2 direct
+`osPi*StartDma`. Of those, **22 are safe** (real allocations: `alHeapAlloc`,
+`mempAllocBytesInBank`, genuine arrays and parameters).
+
+**9 danger points across 7 locations** fabricate the destination by truncating
+a real pointer to 32 bits, which works only while the identity mapping makes
+addresses fit. Most dangerous first:
+
+1. `src/game/model.c:5876-5894` — `loadAnimationFrame`, the known case.
+2. `src/music.c:879/881`, `1073/1075`, `1267/1268` — `(t3 + (s32)ptr) - size`
+   on `alHeapAlloc()` pointers, once per music track. Same mechanism as 1.
+3. `src/game/front.c:6573` and `:6604` — `(s32)(ptr) + offset` stored in a
+   `Gfx *`, feeding two independent DMA chains (`_fileNameLoadToAddr` and
+   `langLoadToBank`).
+4. `src/game/image_bank.c:245` — `((u32)p + 0xFFF) & 0xFFFFF000` truncates a
+   real allocation. `pGlobalimagetable` is declared `s32 *`, so the field's
+   type has to change, not just this line.
+5. `src/game/title.c:399-400` and `:463-464` — file-scope `s32` variables
+   holding N64 virtual addresses, passed straight to `romCopy`.
+
+Three need review rather than a known fix: `src/init.c:132` depends on
+`gen_romassets.py` emitting rebased values; the `load_object_fill_header`
+destination family has ~15 origins not fully traced; and `ob.c:179/241` call
+`romCopy` with four arguments against a three-parameter function through an
+implicit declaration, so the compiler never checks them.
+
+### Do this before touching any of them
+
+`dramHostAddrValid()` (`port/src/libultra.c:794-822`) is **`return 1;` on
+POSIX** — it only validates on Windows. That absence is what makes these bugs
+silent. Once the window exists there is a cheap exact test, namely whether the
+destination lies inside `[W, W + span)`, so make it a real check on every
+platform first. Every site above then fails loudly at its first DMA with the
+offending pointer, instead of corrupting memory somewhere else entirely.
+
+That turns the audit's residual risk, the sites nobody traced, into a crash
+with an address rather than a heisenbug.
