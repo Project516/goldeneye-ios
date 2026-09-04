@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <R4300.h>
 #include "tex.h"
@@ -364,7 +367,13 @@ void texSelect(Gfx **gdlptr, struct sImageTableEntry *tconfig, u32 arg2, s32 arg
             texLoad((s32 *)tconfig, NULL);
         }
 
+#ifdef PORT
+        /* index carries an N64 address here, and aa is indexed as a pointer
+         * just below, so the window base has to go back on. */
+        aa = (u16 *)N64_TO_HOST(PHYS_TO_K0(tconfig->index));
+#else
         aa = PHYS_TO_K0(tconfig->index);
+#endif
         tex = texFindInPool((aa)[-4], NULL);
 
         if (tconfig->level == 0)

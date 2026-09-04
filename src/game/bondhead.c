@@ -11,6 +11,14 @@
 #include "player.h"
 #include "bondhead.h"
 #include "model.h"
+#ifdef PORT
+/* An animation record: the table's data array is a real pointer, and the
+ * record id truncates to its offset because g_pc_animdata_base is
+ * 4 GiB-aligned (D34). Adding the offset to the pointer keeps both halves. */
+#define ANIMREC(id) ((void *)((u8 *)&ptr_animation_table->data + (uintptr_t)(u32)(uintptr_t)(id)))
+#else
+#define ANIMREC(id) ((void *)((s32)(id) + (s32)&ptr_animation_table->data))
+#endif
 
 
 /**
@@ -419,7 +427,7 @@ void bheadAdjustAnimation(f32 speed)
                 modelSetAnimation(
                     &g_CurrentPlayer->model,
                     // match hack: addu address backwards
-                    (struct ModelAnimation *) ((s32)g_BondMoveAnimationSetup[i].anim_id + (s32)&ptr_animation_table->data),
+                    (struct ModelAnimation *) ANIMREC(g_BondMoveAnimationSetup[i].anim_id),
                     (s32) g_CurrentPlayer->animFlipFlag,
                     startframe,
                     0.5f,

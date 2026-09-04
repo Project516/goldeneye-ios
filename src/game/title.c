@@ -25,6 +25,14 @@
 #include "title.h"
 #include "title2.h"
 #include "title3.h"
+#ifdef PORT
+/* An animation record: the table's data array is a real pointer, and the
+ * record id truncates to its offset because g_pc_animdata_base is
+ * 4 GiB-aligned (D34). Adding the offset to the pointer keeps both halves. */
+#define ANIMREC(id) ((void *)((u8 *)&ptr_animation_table->data + (uintptr_t)(u32)(uintptr_t)(id)))
+#else
+#define ANIMREC(id) ((void *)((s32)(id) + (s32)&ptr_animation_table->data))
+#endif
 
 #ifdef PORT
 #include <stdlib.h>
@@ -244,7 +252,7 @@ Gfx *sub_GAME_7F007F30(Gfx *gdl, s32 count, Mtxf *matrix)
 
             if (gunbarrelTimer == BOND_EYE_ANIM_START)
             {
-                modelSetAnimation(chrModelInstance, (struct ModelAnimation *) ((s32) &ANIM_DATA_bond_eye_fire + (s32) &ptr_animation_table->data), 0, 2.0f, 0.910000026f, 16.0f);
+                modelSetAnimation(chrModelInstance, (struct ModelAnimation *) ANIMREC(&ANIM_DATA_bond_eye_fire), 0, 2.0f, 0.910000026f, 16.0f);
             }
 
             if (gunbarrelTimer == BOND_EYE_ANIM_SPEEDUP)

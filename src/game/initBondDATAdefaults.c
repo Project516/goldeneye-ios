@@ -9,6 +9,14 @@
 #include "player.h"
 #include "bondhead.h"
 #include "model.h"
+#ifdef PORT
+/* An animation record: the table's data array is a real pointer, and the
+ * record id truncates to its offset because g_pc_animdata_base is
+ * 4 GiB-aligned (D34). Adding the offset to the pointer keeps both halves. */
+#define ANIMREC(id) ((void *)((u8 *)&ptr_animation_table->data + (uintptr_t)(u32)(uintptr_t)(id)))
+#else
+#define ANIMREC(id) ((void *)((s32)(id) + (s32)&ptr_animation_table->data))
+#endif
 
 
 //data
@@ -166,7 +174,7 @@ void sets_a_bunch_of_BONDdata_values_to_default(void)
     {
         sub_GAME_7F0062C0(
             // match hack: addu address calculated backwards
-            (void*)((s32)g_BondMoveAnimationSetup[i].anim_id + (s32)&ptr_animation_table->data),
+            (void*)ANIMREC(g_BondMoveAnimationSetup[i].anim_id),
             (s32)g_BondMoveAnimationSetup[i].loopframe,
             (s32)g_BondMoveAnimationSetup[i].endframe,
             &spD0);
@@ -194,7 +202,7 @@ void sets_a_bunch_of_BONDdata_values_to_default(void)
     modelSetAnimation(
         &g_CurrentPlayer->model,
         // match hack: addu address calculated backwards
-        (struct ModelAnimation *) ((s32)g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].anim_id + (s32)&ptr_animation_table->data),
+        (struct ModelAnimation *) ANIMREC(g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].anim_id),
         0,
         g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe,
         0.5f,
