@@ -205,10 +205,16 @@ s32 g_DebugPortalsInputBuffer2 = 0;
 s32 g_DebugPortalsInputBuffer3 = 0;
 s32 g_DebugPortalsInputBuffer4 = 0;
 
-/* Weak aliases onto the four buffers above. Clang resolves `#pragma weak X = Y`
- * alongside a matching extern declaration as two candidates for one name and
- * rejects every use as ambiguous, so spell the alias as an attribute instead:
- * GCC and Clang both accept it and emit the same weak alias. */
+/* These name the four buffers above. Spelled three different ways because no
+ * single one works everywhere: `#pragma weak X = Y` plus an extern is
+ * ambiguous under Clang, and Mach-O has no symbol aliases at all, so on Apple
+ * the name is simply a macro for the thing it aliased. */
+#if defined(__APPLE__)
+#define g_DebugPortalsInputBufferSource1 g_DebugPortalsInputBuffer1
+#define g_DebugPortalsInputBufferSource2 g_DebugPortalsInputBuffer2
+#define g_DebugPortalsInputBufferSource3 g_DebugPortalsInputBuffer3
+#define g_DebugPortalsInputBufferSource4 g_DebugPortalsInputBuffer4
+#else
 extern s32 g_DebugPortalsInputBufferSource1
     __attribute__((weak, alias("g_DebugPortalsInputBuffer1")));
 extern s32 g_DebugPortalsInputBufferSource2
@@ -217,6 +223,7 @@ extern s32 g_DebugPortalsInputBufferSource3
     __attribute__((weak, alias("g_DebugPortalsInputBuffer3")));
 extern s32 g_DebugPortalsInputBufferSource4
     __attribute__((weak, alias("g_DebugPortalsInputBuffer4")));
+#endif
 
 /**
  * Something debug related in the MP manage method.

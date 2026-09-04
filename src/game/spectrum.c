@@ -53,12 +53,15 @@ u8 spec_keyboard_buffer[] =
     0xFF
 };
 
-/* Names the first row of the keyboard buffer. Spelled as an attribute rather
- * than `#pragma weak` + extern, which Clang treats as two candidates for one
- * name and rejects at every use; the attribute has to follow the definition
- * it aliases. */
+/* Names the first row of the keyboard buffer. Not `#pragma weak` + extern,
+ * which Clang treats as two candidates for one name, and not an alias
+ * attribute on Apple, where Mach-O has no symbol aliases. */
+#if defined(__APPLE__)
+#define spec_keyboard_row_caps_z_x_c_v (spec_keyboard_buffer[0])
+#else
 extern u8 spec_keyboard_row_caps_z_x_c_v
     __attribute__((weak, alias("spec_keyboard_buffer")));
+#endif
 
 u8 spec_kempston_joystick_state = 0;
 
