@@ -414,7 +414,7 @@ def build_segments(region, csv, obseg_resolved, ramrom_files, music_tracks,
 # Emission
 # --------------------------------------------------------------------------
 
-def emit(region, csv, rom_size):
+def emit(region, csv, rom_size, macho=False):
     lines = []
     ap = lines.append
     ap("/*")
@@ -426,12 +426,21 @@ def emit(region, csv, rom_size):
     ap(" * on hardware once romdata.c has mapped the .z64 at 0x10000000.")
     ap(" * Regenerate: python3 scripts/gen_romassets.py " + region)
     ap(" */")
-    ap(".section .data")
+    # Mach-O differs from ELF twice over: the section syntax, and symbol
+    # naming. Mach-O prefixes C symbols with an underscore, and it treats a
+    # leading `L` as a local label, which every language-bank symbol (LameE,
+    # Ltitle...) starts with. The underscore settles both.
+    if macho:
+        ap(".section __DATA,__data")
+    else:
+        ap(".section .data")
     ap("")
 
+    pfx = "_" if macho else ""
+
     def sym(name, value):
-        ap(f".global {name}")
-        ap(f".set {name}, 0x{value:X}")
+        ap(f".global {pfx}{name}")
+        ap(f".set {pfx}{name}, 0x{value:X}")
 
     # --- obseg (file_resource_table order = ROM order) -------------------
     entries = parse_resource_table(region)
@@ -543,9 +552,11 @@ def emit(region, csv, rom_size):
 
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ("u", "e", "j"):
-        die("usage: gen_romassets.py <u|e|j>")
-    region = sys.argv[1]
+    args = [a for a in sys.argv[1:] if a != "--macho"]
+    macho = "--macho" in sys.argv[1:]
+    if len(args) != 1 or args[0] not in ("u", "e", "j"):
+        die("usage: gen_romassets.py <u|e|j> [--macho]")
+    region = args[0]
     csv = Csv(region)
 
     rom_size = None
@@ -558,7 +569,7 @@ def main():
         print(f"gen_romassets: note: {rom_name} not found; "
               f"images segment sized from CSV max", file=sys.stderr)
         rom_size = max(o + s for o, s in csv.by_path.values())
-    emit(region, csv, rom_size)
+    emit(region, csv, rom_size, macho)
 
 
 if __name__ == "__main__":

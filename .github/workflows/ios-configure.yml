@@ -40,8 +40,9 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-path
 
       # gen_romassets.py needs no ROM: it reads the committed CSV layout.
-      - name: Regenerate ROM-asset symbol file (US)
-        run: python3 scripts/gen_romassets.py u
+      # Mach-O needs different section syntax and underscore-prefixed symbols.
+      - name: Regenerate ROM-asset symbol file (US, Mach-O)
+        run: python3 scripts/gen_romassets.py u --macho
 
       - name: Configure for iOS
         continue-on-error: true
