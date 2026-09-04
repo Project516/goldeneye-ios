@@ -24,8 +24,6 @@ Context is scarce. Load by tier; do not blind-read whole files.
   - `docs/dev/findings.md` — the `Dxx` finding log (§F + §H).
     **Jump to a specific `Dxx` via the index at the top of §F.** Never
     linear-read.
-  - `docs/dev/HANDOFF-ARCHIVE.md` — prior-session narrative (M-2…). Only
-    when tracing the history of one fix.
   - `docs/dev-process.md` — before dispatching a subagent (also Tier 1
     if you may dispatch this session).
 

@@ -2,14 +2,14 @@
 
 Stages:
 
-1. **Extract assets from your ROM** (§2) — a one-time step using the
-   decompilation's own toolchain to pull levels, models, textures, fonts and
-   music into `assets/`. *(Only needed to regenerate the committed data files;
-   a plain `git clone` already has what the PC build compiles.)*
-2. **Build the port** (§3) — a CMake build compiling the game sources plus the
-   `port/` layer into a native executable. Needs no ROM.
-3. **Generate the PC asset sidecars** (§4) — two pure-Python converters turn
-   ROM model / stage data into the PC-layout `data/pcmodels-*` / `data/pccg-*`
+1. **Extract assets from your ROM** (§2). A one-time step, using the
+   decompilation's own toolchain, that pulls levels, models, textures, fonts
+   and music into `assets/`. *(Only needed to regenerate the committed data
+   files; a plain `git clone` already has what the PC build compiles.)*
+2. **Build the port** (§3). A CMake build that compiles the game sources plus
+   the `port/` layer into a native executable. Needs no ROM.
+3. **Generate the PC asset sidecars** (§4). Two pure-Python converters turn
+   ROM model and stage data into the PC-layout `data/pcmodels-*` / `data/pccg-*`
    files the port loads at runtime. **Required to run.**
 
 You need a GoldenEye 007 N64 ROM you legally own (`.z64`, big-endian). See the
@@ -23,8 +23,8 @@ versions and hashes.
 ### Port build
 
 > **Only the Windows (MSYS2 MINGW64) path is tested.** The Debian/Ubuntu and
-> macOS columns below are best-effort guidance — the port has never been built
-> or run on Linux or macOS. Expect to fix build breaks yourself on those
+> macOS columns below are best-effort guidance. The port has never been built
+> or run on Linux or macOS, so expect to fix build breaks yourself on those
 > platforms.
 
 | Need | Windows (MSYS2 MINGW64) | Debian/Ubuntu | macOS (Homebrew) |
@@ -40,12 +40,10 @@ versions and hashes.
 
 The extraction scripts need `binutils-mips-linux-gnu` (or an equivalent MIPS
 binutils), `make`, `git`, and `python3`. They build a small host-compiled
-`tools/extractor` and slice blobs straight out of the ROM — **no IDO / IRIX
+`tools/extractor` and slice blobs straight out of the ROM. **No IDO / IRIX
 toolchain is involved in extraction or in the PC build.** (The IDO toolchain is
 only needed to build the N64 ROM itself, and its proprietary SGI binaries are
-not distributed here — see [`SetupGuide.md`](SetupGuide.md) "Recompile IDO".)
 On Windows this is easiest under WSL or a Linux VM. Full details and
-alternatives (Docker) are in [`SetupGuide.md`](SetupGuide.md).
 
 ---
 
@@ -70,7 +68,6 @@ and run:
 (US extraction is a prerequisite for the others.)
 
 This populates `assets/` with the generated `.bin` blobs the build needs. See
-[`SetupGuide.md`](SetupGuide.md) for the in-depth build/asset pipeline.
 
 ---
 
@@ -103,10 +100,10 @@ builds are named `ge007.pal-final.x86_64` / `ge007.jpn-final.x86_64`.
 ## 4. Generate the PC asset sidecars (required to run)
 
 The port does **not** read model geometry, stage bg/stan data, or per-level
-setup data from the raw ROM at runtime — it reads them from PC-layout *sidecar*
+setup data from the raw ROM at runtime. It reads them from PC-layout *sidecar*
 files under `data/`, produced offline by three converters. **Without them the
 game shows the intro logos and then crashes** in
-`modelPromoteNodeOffsetsToPointers` (finding D179) or on the first level load
+`modelPromoteNodeOffsetsToPointers` (finding D179), or on the first level load
 (missing stage setup).
 
 Put your ROM in `data/` first (same file the game runs from):
@@ -134,10 +131,10 @@ deterministic function of the ROM. Re-run after any change to `d43_emit.py` /
 `d88_propdefs.py`).
 
 > The release bundle ships `prepare-assets/prepare-assets.py`, which runs all
-> three passes against your ROM automatically — see the bundled `README.md`.
+> three passes against your ROM automatically. See the bundled `README.md`.
 
-> `data/pcmodels-*/` and `data/pccg-*/` are gitignored ROM-derived game data —
-> never commit or redistribute them.
+> `data/pcmodels-*/` and `data/pccg-*/` are gitignored ROM-derived game data.
+> Never commit or redistribute them.
 
 ---
 

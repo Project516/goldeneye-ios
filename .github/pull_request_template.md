@@ -9,11 +9,11 @@ rules there are non-negotiable.
 
 ## Why
 
-<!-- The reasoning, not just the diff. What was wrong / missing? -->
+<!-- The reasoning, not just the diff. What was wrong or missing? -->
 
 ## Scope check
 
-- [ ] No changes under `src/` or `include/` — **or** the only changes are the
+- [ ] No changes under `src/` or `include/`, or the only changes are the
       narrow `#ifdef PORT` ABI exception (CONTRIBUTING.md rule 2), and each is
       documented in `docs/porting-notes.md` / `docs/dev/findings.md`.
 - [ ] `Makefile`, `tools/`, `rsp/`, `ld/` untouched (N64 build).
@@ -24,13 +24,15 @@ rules there are non-negotiable.
 
 <!-- What you actually ran. Delete lines that don't apply. -->
 
-- [ ] `./build-pc.sh ntsc-final` — clean configure + link
+- [ ] `./build-pc.sh ntsc-final`, clean configure and link
 - [ ] Crash-free run of at least one level (`-level_09`)
-- [ ] Single-frame `GE_PCDUMP` diff against the committed golden — no
+- [ ] Single-frame `GE_PCDUMP` diff against the committed golden, no
       unexpected change
 - [ ] pal-final / jpn-final also configured
+- [ ] iOS probe changes: verified against `docs/ios/AGENTS.md` and the
+      `probe-ios` workflow
 
-Platform tested: <!-- e.g. Windows 10 / MSYS2 MINGW64 -->
+Platform tested:
 
 ## Notes for the reviewer
 

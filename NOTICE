@@ -1,48 +1,43 @@
-GoldenEye 007 PC port
-=====================
+goldeneye-ios
+=============
 
-WHAT IS AND ISN'T COVERED BY THIS PROJECT'S LICENSE
---------------------------------------------------
+What this project's licence covers
+----------------------------------
 
-The MIT License in the LICENSE file covers the original work in this
-repository:
+The AGPL-3.0 licence in LICENSE covers the original work in this repository:
 
-  * the port layer            port/
-  * the PC build system        CMakeLists.txt, cmake/, build-pc.sh
-  * PC-port tooling            tools_pc/
-  * documentation              docs/, README.md
+  * the iOS port layer and probe   port/, probe/
+  * the build system               CMakeLists.txt, cmake/, build-pc.sh
+  * port tooling                   tools_pc/
+  * documentation                  docs/, README.md
 
-Third-party code vendored into the port layer keeps its own license:
+Upstream port layer
+-------------------
 
-  * port/fast3d/  - software RSP adapted from the Perfect Dark port /
-    libultraship / sm64-port lineage; see port/fast3d/LICENSE.txt.
-  * port/fast3d/glad/ - generated OpenGL loader (glad), public domain / MIT.
+This project is a hard fork of jkdansereau/goldeneye-pc-port. That project's
+port layer, build system and tooling were released under the MIT licence,
+Copyright (c) 2026 James Dansereau. The full text is preserved in LICENSE.MIT.
 
-It does NOT cover:
+MIT permits sublicensing, so that work is redistributed here as part of an
+AGPL-3.0 combined work. The MIT notice stays with it and must not be removed.
 
-  * src/, include/, assets/, Makefile, tools/, rsp/, ld/, and the other
-    files inherited from the GoldenEye 007 decompilation
-    (https://github.com/n64decomp/007). The upstream project is published
-    without an explicit license; those files are included here on the same
-    basis, unmodified except where a PC-port ABI fix is marked `#ifdef PORT`
-    and documented in docs/dev/findings.md. This repository is a downstream
-    fork of that decompilation with a PC port added on top.
+Third-party code
+----------------
 
-    As is standard for console decompilation projects, some game data is
-    present as re-expressed source (animation tables, display lists, data
-    tables) inherited verbatim from the upstream repository. The bulk game
-    assets -- textures, audio, models, level geometry, in-game text -- are
-    NOT included and are extracted from your own ROM at build time.
+Vendored code keeps its own licence:
 
-NO NINTENDO / RARE CONTENT IS DISTRIBUTED HERE
----------------------------------------------
+  * port/fast3d/       software RSP adapted from the Perfect Dark port,
+                       libultraship and sm64-port. See port/fast3d/LICENSE.txt.
+  * port/fast3d/glad/  generated OpenGL loader, public domain or MIT.
+  * tools/ido5.3_recomp/rabbitizer/  see its own LICENSE.
 
-This repository contains NO copyrighted ROM data, game assets (textures,
-models, levels, audio, text), or Nintendo/Rare code. Building a playable
-executable requires a GoldenEye 007 Nintendo 64 ROM that you legally own;
-the build extracts the required assets from that ROM on your own machine.
+What no licence here covers
+---------------------------
 
-GoldenEye 007 is a trademark of its respective rights holders. This project
-is a non-commercial, fan-made preservation and porting effort, and is not
-affiliated with or endorsed by Nintendo, Rare, MGM, EON Productions, Danjaq,
-or any other rights holder.
+src/, include/, assets/, Makefile, tools/, rsp/ and ld/ come from the GoldenEye
+007 decompilation. That work describes a copyrighted game. Nothing in this
+repository grants any right to GoldenEye 007 itself, which remains the property
+of its owners.
+
+No ROM, and no data extracted from a ROM, is distributed here or in any build
+artifact. You must supply your own copy of the game.

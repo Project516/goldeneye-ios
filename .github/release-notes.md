@@ -1,60 +1,36 @@
-## GoldenEye 007 PC Port — alpha
+## goldeneye-ios
 
-> ⚠️ **Very early research alpha. Not a playable game.**
-> The intro and menus render and all 21 solo missions load, but:
-> - **no audio** (Phase 3, not started);
-> - some front-end 3D models are broken (the spinning Nintendo logo, the
->   MISSION COMPLETE / mode-select models);
-> - outdoor levels render with a **black sky**;
-> - expect crashes and glitches once past the level intro.
->
-> This is a technical demo of the porting work. If you want to *play* GoldenEye
-> on PC, use one of the Xbox 360 recompilation projects instead — see the
-> [project README](https://github.com/jkdansereau/goldeneye-pc-port#how-this-differs-from-the-other-goldeneye-pc-projects).
+There is no release yet. Nothing here is playable on iOS: the port is still
+at the memory-rebase stage (see `docs/ios/plan.html` and `docs/ios/AGENTS.md`).
+The Linux build boots, renders the intro and front end, and loads all 21 solo
+missions, but has no audio. Neither is packaged for distribution today.
+
+This file is the template for when there is something to announce. When that
+day comes, fill in the sections below rather than inventing new ones.
+
+### What changed
+
+<!-- One paragraph, plain language, what a user notices. -->
 
 ### Downloads
 
-| File | Platform |
-|---|---|
-| `goldeneye-pc-port-<version>-win64.zip` | Windows x86-64 |
-| `goldeneye-pc-port-<version>-linux-x86_64.tar.gz` | Linux x86-64 |
-
-Each contains the engine executable, a README, license texts, and the
-`prepare-assets` tool. **No ROM, no game assets.** The Windows bundle also
-carries its runtime DLLs; the Linux bundle links against your distro's SDL2 /
-zlib / libGL (`sudo apt install libsdl2-2.0-0 zlib1g libgl1`, or the equivalent).
-
-Windows development and playtesting is the primary path; the Linux build boots
-and renders (tested on WSLg) but has had far less exercise.
+The build is not distributed as a Linux binary. The iOS build is produced as
+an unsigned IPA by GitHub Actions and sideloaded with SideStore, there is no
+Mac involved anywhere in that pipeline. Once a release exists, list the
+artifact names and the workflow that produced them here.
 
 ### Running it
 
-You supply your own **NTSC-U GoldenEye 007 N64 ROM** (`.z64`, big-endian,
-`SHA-1 abe01e4aeb033b6c0836819f549c791b26cfde83`). Only the US ROM is supported
-in this alpha.
-
-1. Unpack the archive.
-2. Make a `data/` folder next to the executable and put the ROM in it as
-   `ge007.ntsc-final.z64`.
-3. Run the one-time asset step (needs Python 3.8+):
-   `python3 prepare-assets/prepare-assets.py`
-   — it reads your ROM and writes the two `data/pc*-ntsc-final/` folders the
-   engine needs. Standard library only; a few seconds.
-4. Run the executable **from that folder**.
-
-Full steps are in the bundled `README.md`.
-
-### Verify the download
-
-```
-sha256sum -c goldeneye-pc-port-<version>-win64.zip.sha256
-sha256sum -c goldeneye-pc-port-<version>-linux-x86_64.tar.gz.sha256
-```
+You supply your own GoldenEye 007 (USA) N64 ROM
+(sha1 `abe01e4aeb033b6c0836819f549c791b26cfde83`). No ROM or ROM-derived data
+is distributed by this project, ever. Full steps are in `docs/building.md`.
 
 ### Source & docs
 
-<https://github.com/jkdansereau/goldeneye-pc-port> — built on the
-[GoldenEye 007 decompilation](https://github.com/n64decomp/007), architecture
-after the [Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark).
-Non-commercial fan preservation/research project; not affiliated with any
-rights holder.
+<https://github.com/Project516/goldeneye-ios>. This is a hard fork of
+[goldeneye-pc-port](https://github.com/jkdansereau/goldeneye-pc-port), built
+on the [GoldenEye 007 decompilation](https://github.com/n64decomp/007). It
+does not track upstream and will not merge from it. Licensed AGPL-3.0
+(`LICENSE`); the original MIT notice from upstream is preserved in
+`LICENSE.MIT`. Non-commercial fan project, not affiliated with any rights
+holder.

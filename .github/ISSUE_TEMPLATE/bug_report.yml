@@ -1,5 +1,5 @@
 name: Bug report (build or run)
-description: A build failure, crash, hang, or rendering/audio/input defect in the PC port
+description: A build failure, crash, hang, or rendering/audio/input defect in the port
 labels: ["bug"]
 body:
   - type: markdown
@@ -7,13 +7,15 @@ body:
       value: |
         Thanks for filing a report. First, please check:
 
-        - The port is **Phase 2 of 4** — rendering is incomplete and many
-          cosmetic defects are already tracked in
-          [`docs/dev/GRAPHICS-BACKLOG.md`](https://github.com/jkdansereau/goldeneye-pc-port/blob/main/docs/dev/GRAPHICS-BACKLOG.md).
-          Search open issues and that file before filing.
-        - Only the **Windows / MSYS2 MINGW64** build is tested. Linux and
-          macOS are best-effort — build breaks there are expected.
-        - Do **not** attach a ROM, extracted assets, or any game data.
+        - This is a hard fork of
+          [goldeneye-pc-port](https://github.com/jkdansereau/goldeneye-pc-port).
+          File issues about the PC port itself there, not here.
+        - The Linux build works. The front end and all 21 solo missions load
+          and render; there is no audio yet.
+        - The iOS port is at the memory-rebase stage. Nothing is playable on
+          iOS yet, so "it doesn't run on my phone" isn't a bug report, it's
+          expected.
+        - Do not attach a ROM, extracted assets, or any game data.
   - type: input
     id: commit
     attributes:
@@ -33,7 +35,7 @@ body:
     id: os
     attributes:
       label: OS / environment
-      description: e.g. "Windows 10, MSYS2 MINGW64" or "Ubuntu 22.04, native gcc"
+      description: e.g. "Ubuntu 24.04, gcc-14" or "iOS 17, probe-ios build"
     validations:
       required: true
   - type: dropdown
@@ -44,8 +46,8 @@ body:
         - Asset extraction
         - CMake configure
         - Compile / link
-        - Runtime — crash or hang
-        - Runtime — wrong rendering / audio / input
+        - "Runtime: crash or hang"
+        - "Runtime: wrong rendering / audio / input"
     validations:
       required: true
   - type: textarea
@@ -66,6 +68,6 @@ body:
     attributes:
       label: Logs
       description: |
-        Paste the terminal error, and `ge007.crash.log` if the port crashed.
+        Paste the terminal error, and the crash log if the port crashed.
         For a rendering defect, attach a screenshot.
       render: text

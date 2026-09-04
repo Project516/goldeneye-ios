@@ -1,41 +1,40 @@
-# Security Policy
+# Security policy
 
-This project is a non-commercial, fan-made research port. It has no server
-component and ships no binaries. The realistic security surface is:
+This is a hobby game port with no users, no network service, and no
+secrets. There isn't much of a security surface here, honestly. The two
+realistic risks are:
 
-- the PC port executable parsing your own ROM and asset files at load time
-  (a malformed ROM/asset could in principle crash it or worse), and
-- the build/extraction scripts and CI workflow.
+- the engine parsing your own ROM and asset files at load time. A malformed
+  ROM or asset could in principle crash it, or worse, and
+- the build, extraction, and CI scripts.
 
-## Reporting a vulnerability
+## Reporting a problem
 
-Please **do not** open a public issue for a security problem.
+Please do not open a public issue for a security problem. Use GitHub's
+private vulnerability reporting instead: Security -> Report a vulnerability
+on this repository
+(<https://github.com/Project516/goldeneye-ios/security/advisories/new>).
 
-Use GitHub's private vulnerability reporting:
-**Security → Report a vulnerability** on this repository
-(<https://github.com/jkdansereau/goldeneye-pc-port/security/advisories/new>).
+If that does not work for you, a regular issue is fine too, this project has
+no users to protect from disclosure.
 
-If that is unavailable, email the maintainer at the address on their GitHub
-profile with `SECURITY` in the subject.
+Include what you can:
 
-Please include:
-
-- affected version / commit hash (from `git rev-parse HEAD`),
-- OS and how you built (region, `IDO_RECOMP`, MSYS2 vs WSL, …),
+- the commit hash (`git rev-parse HEAD`),
+- OS and how you built (region, Linux vs iOS probe),
 - a minimal reproduction, and
-- the crash log (`ge007.crash.log`) or a stack trace if you have one.
+- the crash log or a stack trace if you have one.
 
 ## Scope
 
-In scope: memory-safety bugs in the `port/` layer and PC-port tooling,
-issues in the CI workflow or build scripts, and dependency problems we can
-act on.
+In scope: memory-safety bugs in the `port/` layer or the iOS probe, and
+problems in the CI workflows or build scripts.
 
 Out of scope: bugs inherited unchanged from the upstream
-[GoldenEye 007 decompilation](https://github.com/n64decomp/007) that are not
-made worse by the port (report those upstream), missing-asset or wrong-ROM
-errors, and anything requiring a ROM or assets we do not distribute.
+[GoldenEye 007 decompilation](https://github.com/n64decomp/007) (report those
+there, not here), missing-asset or wrong-ROM errors, and anything requiring a
+ROM or assets this project does not distribute.
 
 ## Supported versions
 
-Only the tip of the default branch is supported. There are no releases yet.
+Only the tip of `main` is supported. There are no releases yet.

@@ -8,7 +8,6 @@ the workflow below is what makes that productive rather than chaotic.
 
 For the project context — the two-model split, the timeline, and an honest
 assessment of what did and did not work — see
-[`dev/agentic-development.md`](dev/agentic-development.md).
 
 It is adapted from Chris Lewis's write-up
 [*"Decompiling a Nintendo 64 Game in 84 Days"*](https://blog.chrislewis.au/decompiling-a-nintendo-64-game-in-84-days/)
