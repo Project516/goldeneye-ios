@@ -767,7 +767,9 @@ set(SRC
 # that works. Once c++/v1 is genuinely first, libc++'s wrapper #include_next's
 # onward and lands on port/shim, which routes to the real host header.
 add_library(port_cxx STATIC ${SRC_FAST3D_CXX} ${SRC_PORT_CXX})
-set_target_properties(port_cxx PROPERTIES INCLUDE_DIRECTORIES "")
+# Unset it. Assigning "" leaves a one-element list holding an empty string,
+# which then sits at the head of the include order.
+set_property(TARGET port_cxx PROPERTY INCLUDE_DIRECTORIES)
 # PORT_CXX_STDLIB_DIR is empty off Apple, where libstdc++ makes no such demand
 # and the compiler's default order already works.
 set(PORT_CXX_INCLUDE_DIRS ${PORT_INCLUDE_DIRS} ${PORT_EXTRA_INCLUDE_DIRS})
@@ -778,6 +780,12 @@ target_include_directories(port_cxx PRIVATE ${PORT_CXX_INCLUDE_DIRS})
 # For the include directories the dependency targets carry as usage
 # requirements, chiefly SDL2's on iOS where it is built from source.
 target_link_libraries(port_cxx PRIVATE ${LIBS})
+# Print the resolved order. Guessing at this has already cost several CI runs.
+get_target_property(_port_cxx_inc port_cxx INCLUDE_DIRECTORIES)
+message(STATUS "port_cxx include order:")
+foreach(_d IN LISTS _port_cxx_inc)
+  message(STATUS "  ${_d}")
+endforeach()
 
 set(BIN_NAME "ge007${BIN_REGION}.${TARGET_ARCH}")
 add_executable(ge007 ${SRC})
