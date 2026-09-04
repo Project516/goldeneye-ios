@@ -131,6 +131,44 @@ remembering" in `memory-rebase.md`.
 For memory work, watch for `n64mem:` and `D60` lines, which report the window
 and any rejected DMA target.
 
+**A Linux run proves nothing about iOS-only code.** Every
+`#if defined(PLATFORM_IOS)` block is compiled out here, so that code is only
+ever seen by a compiler in CI. Push and let `ios-configure` go green before
+spending a macOS runner on `ios-ipa`: the configure job is about 90 s on a
+warm cache, the IPA job is 8 minutes. A constructor calling a helper defined
+below it cost a full IPA cycle to discover.
+
+## Debugging the app on a device
+
+There is no console and no Xcode. Two things make this tractable.
+
+**Read the artifact before changing code.** The IPA is a zip and the binary is
+a Mach-O; each of these answers a whole class of hypothesis in one command,
+without a device:
+
+```sh
+gh release download <tag> --repo Project516/goldeneye-ios-builds -D /tmp/ipa
+unzip -o /tmp/ipa/goldeneye-ios.ipa -d /tmp/ipa/x
+python3 -c "import plistlib;print(plistlib.load(open('/tmp/ipa/x/Payload/GoldenEye.app/Info.plist','rb')))"
+strings -a /tmp/ipa/x/Payload/GoldenEye.app/GoldenEye | grep -F ge007.log
+```
+
+The plist says whether file sharing and the bundle wiring are right. The
+string table says whether a `PLATFORM_IOS` block made it into the build. The
+symbol table says whether SDL's iOS entry point and its Objective-C classes
+are linked (`_SDL_main` in our text plus `_main` in SDL's means libSDL2main's
+`main` is calling ours). GNU `nm` cannot read Mach-O; the 20-line LC_SYMTAB
+reader in D200 works. Doing this retired four hypotheses at once, after I had
+already committed a fix for one of them that turned out to be a no-op.
+
+**The app reports to Documents, and stamps its build.** `ge007-boot.txt` is
+written by a constructor before `UIApplicationMain`; `ge007.log` is written
+from the first log line in `main`; the no-ROM path raises an SDL alert. Both
+files and the alert carry `GE007_VERSION_HASH`, because a report from the
+wrong build looks exactly like a bug. Note that the Files app only lists the
+app under On My iPhone once Documents is non-empty, so "no folder" means
+"nothing was written", not "file sharing is off".
+
 ## Dispatching a subagent
 
 Every brief needs all of: the exact files it may touch, disjoint from any
