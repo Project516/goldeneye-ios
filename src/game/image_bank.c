@@ -91,8 +91,14 @@ struct sImageTableEntry *mpstageselimages;
 extern u8* _GlobalimagetableSegmentRomStart;
 
 
+#ifdef PORT
+/* pos is a real pointer into the compressed stream. */
+void texSetBitstring(void *pos) {
+    img_curpos = (u8 *)pos;
+#else
 void texSetBitstring(s32 pos) {
     img_curpos = pos;
+#endif
     img_curdatatable = 0;
     img_bitcount = 0;
 }

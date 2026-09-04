@@ -29,6 +29,10 @@ extern s32 globalbank_rdram_offset;
 
 void texReset(void);
 u32 texReadBits(s32 bitCount);
+#ifdef PORT
+void texSetBitstring(void *pos);
+#else
 void texSetBitstring(s32 pos);
+#endif
 
 #endif
