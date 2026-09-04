@@ -37,6 +37,25 @@ jobs:
         with:
           persist-credentials: false
 
+      # Every run rebuilds SDL2 and zlib from source, which is most of the wall
+      # clock. The exact key is CMakeLists.txt's hash; the restore-keys
+      # fallback deliberately accepts a tree configured from a different
+      # CMakeLists, because editing that file is the common case and a full
+      # dependency rebuild each time defeats the point. That is safe here for
+      # the reason the dependencies were hoisted in the first place: they are
+      # built before any of our compile options exist, so their flags do not
+      # depend on the rest of the file. cmake always reconfigures on the next
+      # step, and our own objects rebuild when their flags change. If an iOS
+      # result ever looks impossible, bump the key and re-run before believing
+      # it.
+      - name: Cache the iOS build tree
+        uses: actions/cache@v4
+        with:
+          path: build-ios
+          key: ios-build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ios-build-${{ runner.os }}-
+
       - name: Show toolchain
         run: |
           cmake --version | head -1
