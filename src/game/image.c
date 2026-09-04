@@ -367,7 +367,12 @@ s32 texAlignIndices(u8 *src, s32 width, s32 height, s32 format, u8 *dst)
             src++;
         }
 
+#ifdef PORT
+        /* Align without dropping the pointer's high half. */
+        outptr = (u8 *)(((uintptr_t)outptr + 7) & ~(uintptr_t)7);
+#else
         outptr = (u8 *)(((u32)outptr + 7) & ~7);
+#endif
     }
 
     return outptr - dst;
@@ -1661,8 +1666,13 @@ void texReadAlphaBits(u8 *image,s32 count)
 s32 texReadUncompressed(u8 *dst, s32 width, s32 height, s32 format)
 {
 	u32 *dst32 = (u32 *)(((u32)dst + 0xf) & ~0xf);
+#ifdef PORT
+	u16 *dst16 = (u16 *)(((uintptr_t)dst + 7) & ~(uintptr_t)7);
+	u8 *dst8 = (u8 *)(((uintptr_t)dst + 7) & ~(uintptr_t)7);
+#else
 	u16 *dst16 = (u16 *)(((u32)dst + 7) & ~7);
 	u8 *dst8 = (u8 *)(((u32)dst + 7) & ~7);
+#endif
 	s32 x;
 	s32 y;
 
