@@ -20,6 +20,11 @@ on:
         description: 'Release tag in the drop repo (default: ios-<run number>)'
         required: false
         type: string
+      check_token_only:
+        description: 'Only verify IPA_DROP_TOKEN can publish, then stop'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -29,7 +34,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Proves IPA_DROP_TOKEN can actually write a release to the drop repo, on a
+  # Linux runner so it costs nothing. Publishes a draft and deletes it.
+  token-check:
+    if: inputs.check_token_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish and delete a draft release
+        env:
+          GH_TOKEN: ${{ secrets.IPA_DROP_TOKEN }}
+          REPO: Project516/goldeneye-ios-builds
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "IPA_DROP_TOKEN is missing" >&2; exit 1; }
+          gh repo view "$REPO" --json name,visibility
+          TAG="token-check-${{ github.run_id }}"
+          gh release create "$TAG" --repo "$REPO" --draft \
+            --title "token check" --notes "Delete me."
+          gh release delete "$TAG" --repo "$REPO" --yes --cleanup-tag
+          echo "IPA_DROP_TOKEN can read and publish to $REPO"
+
   ipa:
+    if: ${{ !inputs.check_token_only }}
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
