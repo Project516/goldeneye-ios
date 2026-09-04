@@ -347,7 +347,15 @@ void bondviewLoadSetupIntroSection(void)
                     intro_credits = (struct SetupIntroCredits*)intro_record;
 
                     // hack: bad address math
+#ifdef PORT
+                    /* D197: unk04 is a byte offset into the setup file, so this
+                     * is g_ptrStageSetupFile advanced by it. Truncating the
+                     * real pointer to add loses the top half. */
+                    credits = PORT_PTRADD(CreditsEntry *, g_ptrStageSetupFile,
+                                          (u32)(uintptr_t)intro_credits->unk04);
+#else
                     credits = (CreditsEntry*)((s32)g_ptrStageSetupFile + (s32)intro_credits->unk04);
+#endif
                     credits_pointer = credits;
 
                     // what is the point of this?

@@ -98,6 +98,9 @@ tools_pc/run-headless.sh 25 -level_09   # a solo level
 **Never run it on the real display.** The window takes focus every time it
 opens, so a sweep makes the machine unusable for whoever is at the keyboard.
 `run-headless.sh` uses Xvfb, which gives Mesa software GL: slower, same frames.
+It also unsets `WAYLAND_DISPLAY` and forces `SDL_VIDEODRIVER=x11`, without
+which SDL2 picks its Wayland backend and opens a real window on the real
+screen no matter what `DISPLAY` says. `xvfb-run` alone is not enough.
 It prints the numbers below and symbolicates the first crash for you.
 
 Do not rebuild while a sweep is running either. The build overwrites the

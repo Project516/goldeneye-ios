@@ -1,4 +1,7 @@
 #include <ultra64.h>
+#ifdef PORT
+#include "n64mem.h"   /* PORT_PTRADD */
+#endif
 #include <PR/os.h>
 #include <PR/gbi.h>
 #include <gbi_extension.h>
@@ -3511,7 +3514,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                 if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin), (s32 *) (&bboxMax)))
                 {
-                    if (intersectRayTriangle((Vertex *)((s32)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * 24) + ((s32) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
+                    if (intersectRayTriangle(PORT_PTRADD(Vertex *, vtxbase, (idx[0]) << 4), PORT_PTRADD(Vertex *, vtxbase, (idx[1]) << 4), PORT_PTRADD(Vertex *, vtxbase, (idx[2]) << 4), (coord3d *) (((roomnum * 24) + ((s32) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
                     {
                         tcmd = gdl;
                         dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -3694,7 +3697,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                         if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin2), (s32 *) (&bboxMax2)))
                         {
-                            if (intersectRayTriangle((Vertex *)((s32)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * 24) + ((s32) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
+                            if (intersectRayTriangle(PORT_PTRADD(Vertex *, vtxbase, (idx2[0]) << 4), PORT_PTRADD(Vertex *, vtxbase, (idx2[1]) << 4), PORT_PTRADD(Vertex *, vtxbase, (idx2[2]) << 4), (coord3d *) (((roomnum * 24) + ((s32) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
                             {
                                 tcmd = gdl;
                                 dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -5233,7 +5236,7 @@ void bgRoomCalcBB(s32 room) // canonical name
     limits.maxY = -0x7fff;
     limits.maxZ = -0x7fff;
 
-    for (; vertices < (Vtx *) ((s32) g_BgRoomInfo[room].vertices + g_BgRoomInfo[room].usize_point_index_binary); vertices++)
+    for (; vertices < PORT_PTRADD(Vtx *, g_BgRoomInfo[room].vertices, g_BgRoomInfo[room].usize_point_index_binary); vertices++)
     {
         for (j = 0; j < 3; j++)
         {
