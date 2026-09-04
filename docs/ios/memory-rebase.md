@@ -240,25 +240,31 @@ Cleared so far:
   friends as fortified macros, which `src/str.h` then redeclares as functions.
 - The weak aliases are spelled a third way. Mach-O has no symbol aliases.
 
-### The current blocker, which is mechanical
+- Mach-O assembly for `romassets`. `gen_romassets.py --macho` emits
+  `.section __DATA,__data` and underscores all 1685 symbols. The underscore is
+  needed twice over: Mach-O mangles C symbols with one, and it treats a leading
+  `L` as a local label, so every language-bank symbol (`LameE`, `Ltitle...`)
+  was rejected as "non-local symbol required". That cleared 89 errors. The
+  absolute-symbol scheme itself was never in question: these are consumed as
+  data, and a data relocation against an absolute symbol is fine on arm64.
 
-`port/src/romassets_<region>.s` does not assemble as Mach-O. 89 errors, two
-causes, both in `scripts/gen_romassets.py`'s output rather than in anything
-structural:
+### The current blocker
 
-    .section .data          -> Mach-O wants `.section __DATA,__data`
-    .global LameE           -> "non-local symbol required"
+14 errors, all one class, all in the fast3d C++ translation units:
 
-The second is the interesting one. Mach-O treats any symbol starting with `L`
-as a *local* label, so every language-bank symbol (`LameE`, `LameJ`,
-`Ltitle...`) is rejected. Mach-O also mangles C symbols with a leading
-underscore, so emitting `_LameE` fixes the locality and the C linkage
-together.
+    <cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h>
 
-So `gen_romassets.py` needs a Mach-O output mode: underscore-prefix every
-symbol and use Mach-O section syntax. Nothing about the absolute-symbol scheme
-itself is in question; as noted above, these are all consumed as data, and a
-data relocation against an absolute symbol is fine on arm64.
+libc++ on Darwin is stricter than libstdc++ about this. The decomp's own
+`include/stddef.h`, `string.h`, `stdlib.h` and `math.h` sit earlier on the
+include path than the C++ standard library, so `<cstddef>` and friends pick up
+the N64 stubs. `port/shim/` already works around this for the desktop builds
+by routing to the host header by absolute path, which is what the
+`port_host_header()` helper in `CMakeLists.txt` feeds.
+
+The fix is about include-path ordering for C++ TUs specifically, not about
+finding the right header: the shim already knows where the real one is. Look
+at how `SRC_PORT_CXX` gets its include directories, and consider putting the
+libc++ include dir ahead of the decomp's `include/` for those files only.
 
 After that the renderer is next: `port/fast3d/gfx_opengl.cpp` is desktop
 GL 3.3 and iOS has no desktop GL.
