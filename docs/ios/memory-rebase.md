@@ -157,11 +157,12 @@ offending pointer, instead of corrupting memory somewhere else entirely.
 That turns the audit's residual risk, the sites nobody traced, into a crash
 with an address rather than a heisenbug.
 
-## Where the rebase actually got to
+## Where the rebase got to
 
-The window is implemented in `port/src/n64mem.c` and Linux runs on it. The
-game boots, loads, and renders: a 60 second run reached the cast screen with
-3541 VI posts and exited cleanly. It is not yet stable indefinitely.
+Done on Linux. The window is implemented in `port/src/n64mem.c` and the game
+runs on it: a 180 second front-end run and a 90 second `-level_09` run both
+complete with no crash and no rejected DMA target. That is the same standard
+the port met before the rebase.
 
 Working method, which is worth repeating rather than reading code: build, run,
 symbolicate. The `dramHostAddrValid` gate names a bad DMA target with its
@@ -192,14 +193,24 @@ Telling 3 apart from 1 is the only judgement call. If the value is also used
 as an offset, compared against another stored value, or written back into ROM
 layout, it is case 3.
 
+### Two that were not truncations
+
+Worth recording because they cost the most time. `rzipGetSomething` was fixed
+first in `src/game/decompress.c`, which `CMakeLists.txt` excludes in favour of
+`port/src/rzdecomp.c`, so the fix was dead code and the symptom did not move.
+Check which implementation actually compiles before believing a fix.
+
+`gfx_tex_source_is_c_array` decided texture byte order from literal address
+ranges (`0x10xxxxxx` cart, `0x70`-`0x90xxxxxx` DRAM). Nothing crashed; every
+raw N64 stream simply fell through to the C-array branch and got byte-swapped.
+The window makes the test both simpler and harder to get wrong: N64-derived
+data is inside it, the exe image is not.
+
 ### Still open
 
-The 90 second run crashes in `texReadBits` (`image_bank.c:114`) under
-`texInflateZlib`, loading a cast-screen model texture. `struct texpool` and
-`struct tex` both hold real pointers and `compptr` derives from an already
-uintptr-aligned stack buffer, so this looks like corrupt decompressed input
-rather than another truncation. Worth checking what `texLoad` fed it before
-assuming it is a pointer bug.
+Nothing known on Linux. Next is the iOS target itself: a CMake iOS toolchain,
+an SDL2 iOS backend, a GLES3 or Metal renderer, touch controls, and the
+Documents-folder ROM flow.
 
 Not started: `obInit`'s `file_resource_table` `hw_address` pass. It has not
 been needed, because those entries are only ever used as DMA sources and

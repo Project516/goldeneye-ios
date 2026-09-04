@@ -14,10 +14,13 @@ menu, mission select, briefing, mission start. Audio is not implemented on any
 platform. There is a backlog of cosmetic rendering bugs in
 `docs/dev/GRAPHICS-BACKLOG.md`.
 
-The memory rebase is in and working on Linux. The game boots, loads and
-renders through the intro and menus on the 4 GiB window, reaching the cast
-screen in a one minute run. It is not stable indefinitely yet. See
-`docs/ios/memory-rebase.md`.
+The memory rebase is done on Linux. The game runs on the 4 GiB window: a 180
+second front-end run and a 90 second `-level_09` run both complete with no
+crash. See `docs/ios/memory-rebase.md`.
+
+Next is the iOS target itself: a CMake iOS toolchain, an SDL2 iOS backend, a
+GLES3 or Metal renderer, touch controls, and getting the ROM in through the
+Files app.
 
 Two things gated that work and both are settled, measured on a real device
 rather than argued from documentation:
