@@ -20,13 +20,13 @@ on:
 permissions:
   contents: read
 
-# Not cancel-in-progress. This workflow exists to report the iOS error
-# profile for a commit, and a push during a run destroys exactly that: several
-# runs have been cancelled mid-configure and reported nothing, which reads
-# identically to "zero errors".
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+# No concurrency group at all. This workflow exists to report the iOS error
+# profile for a commit. With a group, cancel-in-progress: true killed runs
+# mid-configure, and cancel-in-progress: false still lost them, because GitHub
+# keeps only one *pending* run per group and a newer push displaces it. Either
+# way a cancelled run reports nothing, which reads identically to a clean
+# build. macOS minutes are free on a public repo, so give every commit its own
+# run.
 
 jobs:
   configure:
