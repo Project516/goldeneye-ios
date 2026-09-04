@@ -219,3 +219,46 @@ directly.
 
 Windows is untouched and still identity-mapped. It will need the same sweep if
 anyone wants it working again.
+
+## iOS build bring-up
+
+The iOS configure and build now run in CI on every push touching the build,
+`port/`, `src/` or `include/` (`.github/workflows/ios-configure.yml`). It is
+continue-on-error and reports the remaining errors grouped by kind, so the
+next blocker is a fact rather than a guess. Xcode 26.6, iPhoneOS 26.5 SDK.
+
+Cleared so far:
+
+- CMake knows iOS. Every `APPLE` branch had assumed macOS, and the GCC search,
+  deployment target, target-OS name and GL framework all needed splitting.
+- SDL2 2.30.9 and zlib 1.3.1 build from source for arm64 via FetchContent. An
+  iOS SDK has neither. SDL2 also supplies the UIKit app shell and `main()`.
+- Host C-library headers resolve through the SDK on Apple. The old derivation
+  (compiler dir + `../include`) landed in the Xcode toolchain dir, where
+  `string.h` does not exist. The same fix covers a ccache shim on Linux.
+- `_FORTIFY_SOURCE=0` on Apple. Darwin's `<string.h>` defines `strcpy` and
+  friends as fortified macros, which `src/str.h` then redeclares as functions.
+- The weak aliases are spelled a third way. Mach-O has no symbol aliases.
+
+### The current blocker, which is mechanical
+
+`port/src/romassets_<region>.s` does not assemble as Mach-O. 89 errors, two
+causes, both in `scripts/gen_romassets.py`'s output rather than in anything
+structural:
+
+    .section .data          -> Mach-O wants `.section __DATA,__data`
+    .global LameE           -> "non-local symbol required"
+
+The second is the interesting one. Mach-O treats any symbol starting with `L`
+as a *local* label, so every language-bank symbol (`LameE`, `LameJ`,
+`Ltitle...`) is rejected. Mach-O also mangles C symbols with a leading
+underscore, so emitting `_LameE` fixes the locality and the C linkage
+together.
+
+So `gen_romassets.py` needs a Mach-O output mode: underscore-prefix every
+symbol and use Mach-O section syntax. Nothing about the absolute-symbol scheme
+itself is in question; as noted above, these are all consumed as data, and a
+data relocation against an absolute symbol is fine on arm64.
+
+After that the renderer is next: `port/fast3d/gfx_opengl.cpp` is desktop
+GL 3.3 and iOS has no desktop GL.
