@@ -104,12 +104,22 @@ set(ROMID "ntsc-final" CACHE STRING "ROM id: ntsc-final (US), pal-final (EU), jp
 # Target arch / platform
 # ----------------------------------------------------------------------------
 target_architecture(TARGET_ARCH)
-if(TARGET_ARCH MATCHES "64")
+if(NOT TARGET_ARCH AND CMAKE_OSX_ARCHITECTURES)
+  # target_architecture() compiles a probe and reads its preprocessor output,
+  # which comes back empty for the iOS cross-compile. The binary was named
+  # "ge007." because of it.
+  set(TARGET_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+endif()
+# Decide 64-bitness from the pointer size, not from the arch string. The
+# string was empty on iOS, so PLATFORM_64BIT went undefined and the game code
+# took its 32-bit paths on a 64-bit target: that is what left the ANIM_DATA_*
+# symbols undefined at link (assets/animationtable_data.h).
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(TARGET_IS_64BIT TRUE)
 else()
   set(TARGET_IS_64BIT FALSE)
 endif()
-message(STATUS "Target arch: ${TARGET_ARCH} (64bit=${TARGET_IS_64BIT})")
+message(STATUS "Target arch: ${TARGET_ARCH} (64bit=${TARGET_IS_64BIT}, pointer=${CMAKE_SIZEOF_VOID_P})")
 
 if(WIN32)
   set(TARGET_OS "windows")
