@@ -169,6 +169,33 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/versioninfo.h.in"
   "${CMAKE_BINARY_DIR}/port/include/versioninfo.h" @ONLY)
 
+# Under the Xcode generator CMAKE_OSX_SYSROOT is the SDK *name* ("iphoneos"),
+# not a path, so every "${CMAKE_OSX_SYSROOT}/usr/include/..." below silently
+# misses and falls through to a guess. Resolve it to a real path once. This is
+# what made the libc++ include land nowhere for three CI runs.
+set(PORT_APPLE_SDK "")
+if(APPLE)
+  if(IS_DIRECTORY "${CMAKE_OSX_SYSROOT}")
+    set(PORT_APPLE_SDK "${CMAKE_OSX_SYSROOT}")
+  elseif(CMAKE_OSX_SYSROOT)
+    execute_process(
+      COMMAND xcrun --sdk "${CMAKE_OSX_SYSROOT}" --show-sdk-path
+      OUTPUT_VARIABLE PORT_APPLE_SDK OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  endif()
+  if(NOT IS_DIRECTORY "${PORT_APPLE_SDK}")
+    execute_process(
+      COMMAND xcrun --show-sdk-path
+      OUTPUT_VARIABLE PORT_APPLE_SDK OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  endif()
+  if(IS_DIRECTORY "${PORT_APPLE_SDK}")
+    message(STATUS "Apple SDK: ${PORT_APPLE_SDK}")
+  else()
+    message(FATAL_ERROR
+      "Cannot resolve an Apple SDK path from CMAKE_OSX_SYSROOT="
+      "'${CMAKE_OSX_SYSROOT}'; xcrun --show-sdk-path found nothing either")
+  endif()
+endif()
+
 # Host <string.h> path for port/shim/string.h. The N64 include/string.h
 # declares strlen/strchr with `const unsigned char *`, which conflicts with
 # the host declarations that SDL (and other system headers) pull in, and it
@@ -184,8 +211,8 @@ get_filename_component(_PORT_GCC_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
 # Apple, then the compiler-relative guess, then a plain search.
 function(port_host_header outvar header what)
   set(_p "")
-  if(APPLE AND CMAKE_OSX_SYSROOT AND EXISTS "${CMAKE_OSX_SYSROOT}/usr/include/${header}")
-    set(_p "${CMAKE_OSX_SYSROOT}/usr/include/${header}")
+  if(PORT_APPLE_SDK AND EXISTS "${PORT_APPLE_SDK}/usr/include/${header}")
+    set(_p "${PORT_APPLE_SDK}/usr/include/${header}")
   endif()
   if(NOT _p)
     get_filename_component(_g "${_PORT_GCC_DIR}/../include/${header}" ABSOLUTE)
@@ -453,7 +480,7 @@ if(APPLE)
   get_filename_component(_cxxbin "${CMAKE_CXX_COMPILER}" DIRECTORY)
   foreach(_c
       "${_cxxbin}/../include/c++/v1"
-      "${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
+      "${PORT_APPLE_SDK}/usr/include/c++/v1")
     get_filename_component(_c "${_c}" ABSOLUTE)
     if(NOT PORT_CXX_STDLIB_DIR AND IS_DIRECTORY "${_c}")
       set(PORT_CXX_STDLIB_DIR "${_c}")
@@ -464,7 +491,7 @@ if(APPLE)
   else()
     message(WARNING
       "No libc++ headers found next to ${CMAKE_CXX_COMPILER} or under "
-      "${CMAKE_OSX_SYSROOT}; the C++ TUs will resolve <cstddef> and friends "
+      "${PORT_APPLE_SDK}; the C++ TUs will resolve <cstddef> and friends "
       "against the decomp's N64 headers")
   endif()
 endif()
