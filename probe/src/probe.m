@@ -25,6 +25,7 @@
 #include <mach-o/dyld.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <pthread.h>
 #include <string.h>
 
 /* The three addresses the port hardcodes, with the sizes it actually asks for. */
@@ -39,6 +40,13 @@
  * KSEG0 view. Only the sub-ranges actually used get committed. */
 #define WINDOW_ALIGN  0x100000000ULL              /* 4 GB */
 #define WINDOW_SPAN   (DRAM_K0_BASE + DRAM_SIZE)  /* ~2.01 GB */
+
+/* port/src/libultra.c:350 puts thread stacks in the low 2 GB with MAP_32BIT so
+ * that game code truncating a stack pointer to u32 round-trips. MAP_32BIT does
+ * not exist on Darwin, so stacks have to live in the window instead. This
+ * offset is clear of the cart and both DRAM views. */
+#define STACK_BASE  0x20000000ULL
+#define STACK_SIZE  (1u * 1024u * 1024u)
 
 static void line(NSMutableString *out, NSString *fmt, ...) NS_FORMAT_FUNCTION(2, 3);
 static void line(NSMutableString *out, NSString *fmt, ...) {
@@ -183,11 +191,12 @@ static void *commit(NSMutableString *out, const char *label, uint64_t addr, size
     return rw ? p : NULL;
 }
 
-static BOOL suiteWindow(NSMutableString *out) {
+static BOOL suiteWindow(NSMutableString *out, uint64_t *outBase) {
     line(out, @"SUITE B: 4 GB-aligned window, N64 addr = W + v");
 
     uint64_t base = reserveWindowByTrimming(out);
     if (!base) base = reserveWindowAtFixedBase(out);
+    *outBase = base;
     if (!base) {
         line(out, @"  => NOT USABLE");
         line(out, @"");
@@ -249,6 +258,87 @@ static BOOL suiteWindow(NSMutableString *out) {
     return ok;
 }
 
+
+/* ---- suite C: thread stacks inside the window ---------------------------- */
+
+struct stackCheck {
+    uint64_t window;
+    uint64_t lo;
+    uint64_t hi;
+    BOOL inRange;
+    BOOL roundTrips;
+};
+
+static void *stackProbeThread(void *arg) {
+    struct stackCheck *c = arg;
+    volatile int local = 0;
+    uint64_t addr = (uint64_t)(uintptr_t)&local;
+
+    c->inRange = (addr >= c->lo && addr < c->hi);
+
+    /* The idiom the port relies on: truncate to u32, recover by re-adding W.
+     * Only sound because W is exactly 4 GiB-aligned. */
+    uint32_t truncated = (uint32_t)addr;
+    c->roundTrips = ((c->window + truncated) == addr);
+    return NULL;
+}
+
+static BOOL suiteStacks(NSMutableString *out, uint64_t base) {
+    line(out, @"SUITE C: thread stack inside the window");
+
+    uint64_t stackAddr = base + STACK_BASE;
+    void *stack = mmap((void *)(uintptr_t)stackAddr, STACK_SIZE, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0);
+    if (stack == MAP_FAILED || (uint64_t)(uintptr_t)stack != stackAddr) {
+        line(out, @"  commit stack      FAIL  errno=%d (%s)", errno, strerror(errno));
+        line(out, @"  => NOT USABLE");
+        line(out, @"");
+        return NO;
+    }
+    line(out, @"  commit stack      OK    0x%llx (%u KB)",
+         (unsigned long long)stackAddr, STACK_SIZE / 1024);
+
+    struct stackCheck c = {
+        .window = base, .lo = stackAddr, .hi = stackAddr + STACK_SIZE,
+        .inRange = NO, .roundTrips = NO,
+    };
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    int rc = pthread_attr_setstack(&attr, stack, STACK_SIZE);
+    if (rc != 0) {
+        line(out, @"  attr_setstack     FAIL  rc=%d (%s)", rc, strerror(rc));
+        pthread_attr_destroy(&attr);
+        munmap(stack, STACK_SIZE);
+        line(out, @"  => NOT USABLE");
+        line(out, @"");
+        return NO;
+    }
+
+    pthread_t tid;
+    rc = pthread_create(&tid, &attr, stackProbeThread, &c);
+    pthread_attr_destroy(&attr);
+    if (rc != 0) {
+        line(out, @"  pthread_create    FAIL  rc=%d (%s)", rc, strerror(rc));
+        munmap(stack, STACK_SIZE);
+        line(out, @"  => NOT USABLE");
+        line(out, @"");
+        return NO;
+    }
+    pthread_join(tid, NULL);
+
+    line(out, @"  pthread_create    OK    ran on our stack");
+    line(out, @"  locals in window  %@", c.inRange ? @"OK  " : @"FAIL");
+    line(out, @"  u32 round-trip    %@    W+(u32)&local == &local",
+         c.roundTrips ? @"OK  " : @"FAIL");
+
+    munmap(stack, STACK_SIZE);
+    BOOL ok = c.inRange && c.roundTrips;
+    line(out, @"  => %@", ok ? @"USABLE" : @"NOT USABLE");
+    line(out, @"");
+    return ok;
+}
+
 static NSString *runProbe(void) {
     NSMutableString *out = [NSMutableString string];
 
@@ -270,18 +360,26 @@ static NSString *runProbe(void) {
     BOOL k0   = probeRegion(out, "DRAM K0", DRAM_K0_BASE, DRAM_SIZE);
     BOOL lowOK = cart && v1 && k0;
 
-    BOOL windowOK = suiteWindow(out);
+    uint64_t window = 0;
+    BOOL windowOK = suiteWindow(out, &window);
+    BOOL stacksOK = window ? suiteStacks(out, window) : NO;
 
     line(out, @"================================");
     line(out, @"A (hardcoded low addrs): %@", lowOK ? @"USABLE" : @"NOT USABLE");
     line(out, @"B (4GB window + alias):  %@", windowOK ? @"USABLE" : @"NOT USABLE");
+    line(out, @"C (stacks in window):    %@", stacksOK ? @"USABLE" : @"NOT USABLE");
     line(out, @"");
     if (lowOK) {
         line(out, @"VERDICT: the port's memory model works as-is.");
-    } else if (windowOK) {
+    } else if (windowOK && stacksOK) {
         line(out, @"VERDICT: rebase onto a 4 GB-aligned window.");
-        line(out, @"Low addresses are unreachable, but W + v works and");
-        line(out, @"the two DRAM views alias correctly with vm_remap.");
+        line(out, @"Low addresses are unreachable, but W + v works,");
+        line(out, @"the DRAM views alias with vm_remap, and thread");
+        line(out, @"stacks live in-window with u32 round-tripping.");
+    } else if (windowOK) {
+        line(out, @"VERDICT: window works but thread stacks do not.");
+        line(out, @"portAllocLowStack needs a different answer before");
+        line(out, @"the rebase is safe.");
     } else {
         line(out, @"VERDICT: neither scheme works. The port needs real");
         line(out, @"pointer translation, not a rebase.");
