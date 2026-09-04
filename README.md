@@ -14,8 +14,13 @@ menu, mission select, briefing, mission start. Audio is not implemented on any
 platform. There is a backlog of cosmetic rendering bugs in
 `docs/dev/GRAPHICS-BACKLOG.md`.
 
-The iOS work is at the memory-rebase stage. Two things gated it and both are
-now settled, measured on a real device rather than argued from documentation:
+The memory rebase is in and working on Linux. The game boots, loads and
+renders through the intro and menus on the 4 GiB window, reaching the cast
+screen in a one minute run. It is not stable indefinitely yet. See
+`docs/ios/memory-rebase.md`.
+
+Two things gated that work and both are settled, measured on a real device
+rather than argued from documentation:
 
 - iOS cannot map any address below `0x100000000`, which is where the desktop
   port places the cart image and both DRAM views. All three fail with
