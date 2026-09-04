@@ -175,7 +175,14 @@ extern u32 g_viOriginalVstart1;
 extern Mtx *g_viProjectionMatrix;
 
 /* SCREEN_HEIGHT #define changes based on version (PAL or NTSC) */
+#ifdef PORT
+/* Bound at runtime by port/src/dram.c: the framebuffers live in DRAM, which
+ * the port maps rather than links. Indexing is unchanged; only bare &cfb_16
+ * differs, so use cfb_16 for the base address. */
+extern u8 (*cfb_16)[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
+#else
 extern u8 cfb_16[NUM_VIDEO_FRAME_BUFFERS][SCREEN_WIDTH * SCREEN_HEIGHT * 2];
+#endif
 
 void viShake(f32 param_1);
 

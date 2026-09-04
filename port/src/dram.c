@@ -46,6 +46,9 @@
  *   +0x800000  end of region (8 MB, like an 8-MB-RAM N64)
  */
 
+#include <ultra64.h>
+#include <fr.h>
+
 #include "platform.h"
 #include "system.h"
 
@@ -60,6 +63,35 @@
 #define DRAM_V1_BASE   0x70000000UL /* s32-safe "virtual" view */
 #define DRAM_K0_BASE   0x80000000UL /* KSEG0 mirror view */
 #define DRAM_SIZE      0x00800000UL /* 8 MB */
+
+/*
+ * Objects the game reaches by name that have to live in DRAM rather than in
+ * host BSS. These were link-time absolute symbols (port/src/dram_syms.s);
+ * they are ordinary pointers now, bound by dramBindSymbols() once the region
+ * exists, because arm64 cannot reference an absolute symbol that sits further
+ * than ADRP's +/-4 GB from the image. Offsets are unchanged.
+ *
+ * cfb_16       the two 320x240x16 framebuffers, replacing src/cfb.c.
+ * _bssSegmentEnd  where boss.c starts the mempools.
+ * animations_frame_buffer  animation scratch (D59); loadAnimationFrame()
+ *              addresses it through s32 fields, so it must stay somewhere a
+ *              u32 truncation can recover.
+ */
+#define CFB16_OFS      0x00000000UL
+#define BSSEND_OFS     0x00050000UL
+#define ANIMBUF_OFS    0x007FFD30UL
+
+u8 (*cfb_16)[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
+u32 *_bssSegmentEnd;
+char *animations_frame_buffer;
+
+static void dramBindSymbols(void *v1)
+{
+    char *base = (char *)v1;
+    cfb_16 = (u8 (*)[SCREEN_WIDTH * SCREEN_HEIGHT * 2])(base + CFB16_OFS);
+    _bssSegmentEnd = (u32 *)(base + BSSEND_OFS);
+    animations_frame_buffer = base + ANIMBUF_OFS;
+}
 
 void *dramReserve(void)
 {
@@ -99,6 +131,7 @@ void *dramReserve(void)
     ((volatile char *)v1)[0] = 0;
 
     CloseHandle(hSec);
+    dramBindSymbols(v1);
     return v1;
 #else
     /* memfd + two MAP_SHARED mmaps = one backing store, two views. */
@@ -130,6 +163,7 @@ void *dramReserve(void)
     ((volatile char *)v1)[0] = 0;
 
     close(fd);
+    dramBindSymbols(v1);
     return v1;
 #endif
 }

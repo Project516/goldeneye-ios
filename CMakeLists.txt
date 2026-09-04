@@ -414,10 +414,6 @@ if(NOT EXISTS ${SRC_ROMASSETS})
   message(FATAL_ERROR "Missing ${SRC_ROMASSETS} — run: python3 scripts/gen_romassets.py ${ASSET_REGION}")
 endif()
 
-# Absolute symbols inside the reserved N64-DRAM region (port/src/dram.c):
-# cfb_16 (replaces src/cfb.c) and _bssSegmentEnd (mempool start marker).
-set(SRC_DRAM_SYMS "${CMAKE_SOURCE_DIR}/port/src/dram_syms.s")
-
 # Game code — compiled unmodified.
 file(GLOB_RECURSE SRC_GAME "${CMAKE_SOURCE_DIR}/src/game/*.c")
 
@@ -555,7 +551,6 @@ set(SRC
   ${SRC_GAME}
   ${SRC_PORT}
   ${SRC_ROMASSETS}
-  ${SRC_DRAM_SYMS}
   ${SRC_PORT_CXX}
   ${SRC_FAST3D}
   ${SRC_LIBAUDIO}

@@ -11,11 +11,10 @@
 
 // Where animation frames are saved. Can possibly hold as much as nine, but the game will ever store four at maximum.
 #ifdef PORT
-/* D59: relocated into DRAM by port/src/dram_syms.s (absolute symbol at
- * 0x707FFD30) because loadAnimationFrame() addresses it through s32 fields
- * and a (u32) cast — PC BSS (0x140xxxxxx) would truncate to a wild pointer.
- * N64 build keeps the original BSS array. */
-extern char animations_frame_buffer[0x2D0];
+/* D59: lives in DRAM, bound by port/src/dram.c, because loadAnimationFrame()
+ * addresses it through s32 fields and a (u32) cast — host BSS would truncate
+ * to a wild pointer. N64 build keeps the original BSS array. */
+extern char *animations_frame_buffer;
 #else
 char animations_frame_buffer[0x2D0];
 #endif
@@ -31,8 +30,16 @@ struct animation_table_data * ptr_animation_table;
 //data
 struct bondstruct_unk_animation_related D_80029D60 = {
     NULL,
+#ifdef PORT
+    /* animations_frame_buffer is not a link-time constant on the port, so
+     * both pointers are filled in by alloc_load_expand_ani_table() below,
+     * which is the only thing that reads this struct. */
+    NULL,
+    NULL
+#else
     &animations_frame_buffer, // Two pointers. One always points to the start of the buffer, the other can be modified.
     &animations_frame_buffer
+#endif
 };
 
 s32 animation_table_ptrs1[] = {
@@ -274,6 +281,10 @@ void alloc_load_expand_ani_table(void)
     s32 animsDataSegmentSize;
     
     osCreateMesgQueue(&animMsgQ, animMesg, 8);
+#ifdef PORT
+    D_80029D60.animBufferPtr1 = animations_frame_buffer;
+    D_80029D60.animBufferPtr2 = animations_frame_buffer;
+#endif
     initAnimationsBuffer(&D_80029D60, &animMsgQ, &dword_CODE_bss_80069458);
     
     animsDataSegmentSize = (s32)&_animation_dataSegmentEnd - (s32)&_animation_dataSegmentStart;

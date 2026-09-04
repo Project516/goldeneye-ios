@@ -260,7 +260,13 @@ void bossInitMainthreadData(void)
         g_CurentMMallocValue = (s32) (strtol(tokenFind(1, "-m"), 0, 0) << 0xa);
     }
 
+#ifdef PORT
+    /* Bound by port/src/dram.c; its value is the address the N64 build got
+     * from the symbol itself. */
+    start = (PHYS_TO_K0(osVirtualToPhysical(_bssSegmentEnd)));
+#else
     start = (PHYS_TO_K0(osVirtualToPhysical(&_bssSegmentEnd)));
+#endif
     mempCheckMemflagTokens(start, ((u32)tlbmanageGetTlbAllocatedBlock() - (u32)start));
     mempResetBank(MEMPOOL_PERMANENT);
     langInit();
