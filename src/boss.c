@@ -373,7 +373,13 @@ void bossMainloop(void)
     u32 pendingGfx = 0;
     s32 freeGfx;
     s32 mainTickElapsed;
+#ifdef PORT
+    /* Holds &localGfxDoneMsg, a real stack address, and is handed to the
+     * scheduler as an OSMesg. An s32 truncates it. */
+    OSMesg rspReplyMsg;
+#else
     s32 rspReplyMsg;
+#endif
 
     u32 unused_stackpadding_[56];
 
@@ -660,8 +666,13 @@ void bossMainloop(void)
                                 indycommHostSendDump(taskGrabBuffer, (u8*)0x80000000, 0x400000);
                             }
 
+#ifdef PORT
+                            rspReplyMsg = (OSMesg)(&localGfxDoneMsg);
+                            rspGfxTaskStart(firstGdl, gdl, 0, rspReplyMsg);
+#else
                             rspReplyMsg = (s32)(&localGfxDoneMsg);
                             rspGfxTaskStart(firstGdl, gdl, 0, (s32*)rspReplyMsg);
+#endif
 
                             pendingGfx++;
                             memaSingleDefragPass();
