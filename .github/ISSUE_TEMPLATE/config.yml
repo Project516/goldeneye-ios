@@ -1,19 +1,19 @@
 blank_issues_enabled: true
 contact_links:
   - name: Build & setup guide
-    url: https://github.com/Project516/goldeneye-ios/blob/main/docs/building.md
+    url: https://github.com/Project516/goldeneye-ios/blob/master/docs/building.md
     about: Read this first for build/extraction problems. Most are covered here.
   - name: iOS memory rebase notes
-    url: https://github.com/Project516/goldeneye-ios/blob/main/docs/ios/AGENTS.md
+    url: https://github.com/Project516/goldeneye-ios/blob/master/docs/ios/AGENTS.md
     about: Where the iOS port stands and why. Read before filing an iOS issue.
   - name: Known rendering defects
-    url: https://github.com/Project516/goldeneye-ios/blob/main/docs/dev/GRAPHICS-BACKLOG.md
+    url: https://github.com/Project516/goldeneye-ios/blob/master/docs/dev/GRAPHICS-BACKLOG.md
     about: Cosmetic or rendering issues already known and tracked. Check before filing.
   - name: Security vulnerability
     url: https://github.com/Project516/goldeneye-ios/security/advisories/new
     about: Report memory-safety or build-pipeline vulnerabilities privately, not as a public issue.
   - name: Rights-holder concern
-    url: https://github.com/Project516/goldeneye-ios/blob/main/NOTICE
+    url: https://github.com/Project516/goldeneye-ios/blob/master/NOTICE
     about: If you represent a rights holder, see NOTICE and open an issue titled accordingly.
   - name: Upstream PC port
     url: https://github.com/jkdansereau/goldeneye-pc-port

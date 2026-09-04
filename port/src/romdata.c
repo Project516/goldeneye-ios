@@ -40,6 +40,7 @@ extern int snprintf(char *str, size_t maxsize, const char *format, ...);
 #endif
 
 #include "system.h"
+#include "n64mem.h"
 #include "fs.h"
 #include "romdata.h"
 #include "pcmodels.h"
@@ -120,7 +121,7 @@ static u32 romdataBswap32(u32 v); /* defined below; used by the D55 fixup */
 static int romdataFinishCartMap(const char *tok, u8 *img,
                                 u32 sideTotal, u32 cgTotal)
 {
-    memcpy((void *)(uintptr_t)CART_BASE, img, romSize);
+    memcpy(N64_TO_HOST(CART_BASE), img, romSize);
     free(img);
     mappedAtCartBase = 1;
     sysLogPrintf(LOG_INFO, "romdataInit: %s (%u bytes) mapped at 0x%08X "
@@ -134,8 +135,8 @@ static int romdataFinishCartMap(const char *tok, u8 *img,
      * header that rle_expand_8bit() reads little-endian; match the N64 .data
      * copy by swapping it in place (no-op if it already reads as LE). */
     {
-        extern void *unknown2; /* absolute cart address */
-        u32 *hdr = (u32 *)&unknown2;
+        extern void *unknown2; /* absolute cart address, not a host pointer */
+        u32 *hdr = (u32 *)N64_TO_HOST((uintptr_t)&unknown2);
         if ((u16)*hdr > 512 || (u16)(*hdr >> 16) > 512)
             *hdr = romdataBswap32(*hdr);
     }
@@ -223,25 +224,15 @@ int romdataInit(void)
                          "using heap copy — direct ROM reads will fail",
                          CART_BASE);
 #else
-            /* POSIX: anonymous fixed-address mmap. MAP_FIXED_NOREPLACE (Linux
-             * 4.17+) fails instead of clobbering an existing mapping; where it
-             * is unavailable the plain hint is advisory and the == check below
-             * catches a relocated result. */
-            int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-#ifdef MAP_FIXED_NOREPLACE
-            flags |= MAP_FIXED_NOREPLACE;
-#endif
-            void *at = mmap((void *)(uintptr_t)CART_BASE, maplen,
-                            PROT_READ | PROT_WRITE, flags, -1, 0);
-            if (at != MAP_FAILED && at == (void *)(uintptr_t)CART_BASE) {
+            /* Inside the N64 window, which n64memReserve() already took. */
+            void *at = n64memCommit(CART_BASE, maplen);
+            if (at) {
                 mappedLen = maplen;
                 return romdataFinishCartMap(tok, img, sideTotal, cgTotal);
             }
-            if (at != MAP_FAILED)
-                munmap(at, maplen);
-            sysLogPrintf(LOG_WARNING, "romdataInit: could not map 0x%08X "
-                         "(ASLR/kernel refused the fixed address); using heap "
-                         "copy — direct ROM reads will fail", CART_BASE);
+            sysLogPrintf(LOG_WARNING, "romdataInit: could not commit cart at "
+                         "window offset 0x%08X; using heap copy, direct ROM "
+                         "reads will fail", CART_BASE);
 #endif
         }
 
@@ -260,7 +251,7 @@ void romdataDestroy(void)
 #if defined(PLATFORM_WINDOWS)
         VirtualFree((LPVOID)CART_BASE, 0, MEM_RELEASE);
 #else
-        munmap((void *)(uintptr_t)CART_BASE, (size_t)mappedLen);
+        munmap(N64_TO_HOST(CART_BASE), (size_t)mappedLen);
         mappedLen = 0;
 #endif
         mappedAtCartBase = 0;
@@ -273,7 +264,7 @@ void romdataDestroy(void)
 const u8 *romdataGetRom(void)
 {
     if (mappedAtCartBase)
-        return (const u8 *)(uintptr_t)CART_BASE;
+        return (const u8 *)N64_TO_HOST(CART_BASE);
     return rom;
 }
 u32       romdataGetRomSize(void) { return romSize; }

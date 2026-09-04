@@ -1,7 +1,7 @@
-# In-game PC options menu — design + resume point
+# In-game PC options menu, design and resume point
 
 Status: **config-system foundation landed (M-35); menu surface not built.**
-Pattern follows `docs/dev/AUDIO-PLAN.md` — a plan doc that a later session
+Pattern follows `docs/dev/AUDIO-PLAN.md`, a plan doc that a later session
 executes.
 
 Findings context: D180 (input), D181 (first route-(b) hook). Config API:
@@ -9,7 +9,7 @@ Findings context: D180 (input), D181 (first route-(b) hook). Config API:
 
 ---
 
-## 1. What PD does, and why it doesn't port directly
+## 1. What PD does, and why it does not port directly
 
 PD's `pd_port/port/src/optionsmenu.c` (~2000 lines) hooks port-side handlers
 into **PD's own decomp menu tables** (`menudata`/`menuitem` arrays with
@@ -18,7 +18,7 @@ data-driven list menu.
 
 GE is different. GE's settings UI is the **in-game watch** (`src/game/options.c`):
 `draw_watch_game_options_page` / `draw_watch_control_options_page` +
-`watch_screenN_navigation` — hand-drawn pages with bespoke nav functions,
+`watch_screenN_navigation`, hand-drawn pages with bespoke nav functions,
 not a table. The front-end menus (`front.c`, `initmenus.c`, `mpmenu.c`) are
 also bespoke draw/nav pairs, not a reusable list widget.
 
@@ -36,14 +36,14 @@ in the port layer. Reasons:
 - **Zero `src/` menu-code edits.** No new bespoke nav function to get wrong
   (the watch-nav code is exactly the D118d / over-scroll family).
 - Works in-level *and* in the front end (it's above the game).
-- The values it edits are already port-owned `config.c` variables — the
+- The values it edits are already port-owned `config.c` variables, the
   overlay is just a view over the registered option list.
 - Precedent: the port already draws port-owned UI (FPS in the window title,
   F12 screenshot). This is the render-side equivalent.
 
 Cost: an immediate-mode widget layer (label, slider, toggle, dropdown) in
-fast3d 2D. ~300–500 lines. The `config.c` registry already gives us
-key/min/max/value + a type tag (after M-35) — enough to auto-generate rows.
+fast3d 2D. ~300-500 lines. The `config.c` registry already gives us
+key/min/max/value + a type tag (after M-35), enough to auto-generate rows.
 
 ### Sketch
 
@@ -56,7 +56,7 @@ port/src/optionsoverlay.c
 ```
 
 Registry additions needed in `config.c`:
-- `configForEachOption(cb)` — iterate {key, type, ptr, min, max}.
+- `configForEachOption(cb)`, iterate {key, type, ptr, min, max}.
 - optional per-option metadata: display label, step, enum-value names,
   "apply live" vs "needs restart". Add a `configRegisterIntEx(...)` variant
   or a side table keyed by dotted key.
@@ -71,15 +71,15 @@ or are flagged "restart".
 | Row | Key | Type | Notes |
 |---|---|---|---|
 | VSync | `Video.VSync` | toggle | live (`SDL_GL_SetSwapInterval`) |
-| Frame cap | `Video.FpsCap` | int slider 0–360 | live |
-| MSAA | `Video.MSAA` | dropdown 1/2/4/8 | needs FBO rebuild — flag "restart" for v1 |
+| Frame cap | `Video.FpsCap` | int slider 0-360 | live |
+| MSAA | `Video.MSAA` | dropdown 1/2/4/8 | needs FBO rebuild, flag "restart" for v1 |
 | Texture filter | `Video.TextureFilter` | dropdown nearest/bilinear/3-point | live-ish |
-| Mouse aim speed | `Input.MouseAimSpeed` | slider 1–100 | live |
-| Mouse turn speed | `Input.MouseTurnSpeed` | slider 1–100 | live |
+| Mouse aim speed | `Input.MouseAimSpeed` | slider 1-100 | live |
+| Mouse turn speed | `Input.MouseTurnSpeed` | slider 1-100 | live |
 | Mouse invert Y | `Input.MouseInvertY` | toggle | live |
 | Capture mode | `Input.MouseCaptureMode` | toggle | live |
-| Screen shake | `Game.ScreenShakeIntensity` | slider 0–3 (×) | live (D181) |
-| Screenshot key | — | (F12, documented; rebind = later) | — |
+| Screen shake | `Game.ScreenShakeIntensity` | slider 0-3 (×) | live (D181) |
+| Screenshot key | -- | (F12, documented; rebind = later) | -- |
 
 `configSave()` on overlay close.
 

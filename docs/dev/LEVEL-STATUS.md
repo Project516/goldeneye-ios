@@ -1,4 +1,4 @@
-# LEVEL-STATUS — 21 solo-level load+render sweep (WS4)
+# Level status, 21 solo-level load+render sweep (WS4)
 
 Method: bare `./build-pc/ge007.x86_64.exe -level_XX` (per-level `-m*` pools
 auto-injected, D121), `GE_PCDUMP="80-260:40"`, ~24 s watchdog then
@@ -7,14 +7,14 @@ auto-injected, D121), `GE_PCDUMP="80-260:40"`, ~24 s watchdog then
 0x140000000). "render %" = `tools_pc/pixcount.py` non-clear on the last
 captured frame. Binary at `f2beae4b` + this session's build.
 
-**M-30 re-sweep (2026-08-31, build after D157/D120/RC2): 21 / 21 PASS — no
-crash logs.** First all-green sweep incl. Cuba (54) — the D129 credits-path
+**M-30 re-sweep (2026-08-31, build after D157/D120/RC2): 21 / 21 PASS, no
+crash logs.** First all-green sweep incl. Cuba (54), the D129 credits-path
 crash no longer reproduces on a bare `-level_54` boot (Cuba rendered 92.5%
-crash-free through the window). Verifies that the M-30 changes — D157
+crash-free through the window). Verifies that the M-30 changes, D157
 (objective difficulty byte-offset), RC2 (`Video.FixMipTextures` mip-upload
 clip, default on), D120 (`d43_emit.py` PointUsage emit), the `GE_SAVELOG`/
 `GE_UNLOCK_ALL` `#ifdef PORT` diagnostics, and the front-end mouse-pointer
-mode — introduced no level-load regression. Machine was idle; `level_sweep.sh`
+mode, introduced no level-load regression. Machine was idle; `level_sweep.sh`
 default window/watchdog.
 
 M-25 re-sweep (2026-08-30, port-QoL build `863f436b`): **20 / 21 PASS**,
@@ -22,7 +22,7 @@ unchanged. Caverns (39) flagged CRASH `0xc000001d` once under sweep load →
 2/2 clean on retry (D117/D134 concurrent-load flakiness, not a regression).
 Cuba (54) still the only real crash (known D129 credits path, parked).
 **Silo (20):** PASS. A full-length `GE_PCDUMP` capture froze at ~frame 320
-(silo→Bond camera descent) twice — but both those runs, *and* the pre-M-25
+(silo→Bond camera descent) twice, but both those runs, *and* the pre-M-25
 baseline comparison, were on a machine still loaded from the sweep. On an
 idle machine Silo runs fine (user drove it live past ~1800 frames, VI
 pacemaker healthy, no heartbeat stall). Classic D117/D134 load-sensitive
@@ -30,17 +30,17 @@ stall, not a deterministic bug and not an M-25 regression. If it recurs on
 an idle box, count N runs before believing it (porting-notes.md §E).
 
 Last full re-sweep: 2026-08-29 (M-22), after D134 landed (SP/DP task-done
-event no longer dropped into a full sched interruptQ — the "frame-2 hang"
+event no longer dropped into a full sched interruptQ, the "frame-2 hang"
 that M-13..M-21 wrote off as D117/machine-load flakiness). Build = HEAD
 `a8f27c16`. Optimized `level_sweep.sh` (early-exit once the GE_PCDUMP set
-is on disk / STALL_SECS freeze) — full 21-level sweep now ~7 min.
+is on disk / STALL_SECS freeze), full 21-level sweep now ~7 min.
 
 **M-22 result: 20 / 21 PASS.** Every level loads + renders + survives the
-capture window EXCEPT Cuba. Facility (34) and Jungle (37) — the M-20
-re-verify failures — both PASS cleanly now, confirming D134 was their
+capture window EXCEPT Cuba. Facility (34) and Jungle (37), the M-20
+re-verify failures, both PASS cleanly now, confirming D134 was their
 cause. Only remaining crash:
 
-- **Cuba (54)** — `textMeasure` (`textrelated.c:770`) ← `bondviewRenderCredits`
+- **Cuba (54)**, `textMeasure` (`textrelated.c:770`) ← `bondviewRenderCredits`
   (`bondview2.c:8912`), AV @ `0x1400c3b77`, fault addr NULL, after ~frame
   900. This is the **known D129 residual**: the bare `-level_54` boot
   reaches the cast/credits scroll referencing a text bank the real
@@ -49,34 +49,34 @@ cause. Only remaining crash:
 
 | Level | # | Status | Crash site | Class |
 |---|---|---|---|---|
-| Bunker1  | 09 | **PASS** (M-20: re-verified — 1800 frames crash-free, no `ge007.crash.log`, direct `-level_09` boot at ~90us/frame). The M-19 "boot crash `frames=0` PC `0x1400066fc`" did **not** reproduce on `1fc3cff6` in three separate runs → it was sweep flakiness / D117 nondeterminism under machine load, not a real regression. | — |
-| Silo     | 20 | **PASS** 91.7% | — | — |
-| Archives | 24 | **PASS** 91.1% | — | — |
-| Train    | 25 | **PASS** 87.0% | — | — |
-| Caverns  | 39 | **PASS** 91.6% | — | — |
-| Egypt    | 32 | **PASS** 90.9% | — | — |
-| Cuba     | 54 | **PASS** 92.5% (loads+renders 300+ frames; bare-boot end-credits path `bondviewRenderCredits` still faults intermittently — D76/D129, not a real-flow blocker) | — | — |
-| Dam      | 33 | **PASS** 83.3% | — (C1 fixed, D123) | — |
-| Frigate  | 26 | **PASS** 90.4% | — (C1 fixed, D123) | — |
-| Statue   | 22 | **PASS** 80.1% | — (C1 fixed, D123) | — |
-| Streets  | 29 | **PASS** 91.6% | — (C1 fixed, D123; no C2 crash this run — timing) | — |
-| Cradle   | 41 | **PASS** 55.4% (low — partial render, no crash) | — (C1 fixed, D123) | — |
-| Runway   | 35 | **PASS** | — (D130: `romdataFixupFont` glyph-relayout aliasing) | — |
-| Facility | 34 | **PASS** (M-20 re-verified on an idle machine: frame 1500+, no crash. The M-20 mid-session "boot crash `frames=0`" was concurrent-load flakiness — three subagents/sessions sharing the box. Fix stands: D130.) | — (D130: `romdataFixupFont` corrupted glyph `#`/`"` pixeldata → fast3d AV) | — |
-| Jungle   | 37 | **PASS** (M-20 re-verified on an idle machine: frame 1500+, no crash. M-19/D131: 2400+ crash-free. The M-20 mid-session "frame-2 hang" was concurrent-load flakiness.) | — (D131: `osVirtualToPhysical()` truncated a compiled `.bss` matrix ptr in `explosionRenderPropSmoke` → `seg_addr` now restores the module high word) | — |
-| Aztec    | 28 | **PASS** 90.8% | — (C3 fixed, D125) | — |
-| Bunker2  | 27 | **PASS** 91.5% | — (C3r fixed, D126) | — |
-| Depot    | 30 | **PASS** 79.8% | — (C4 fixed, D126) | — |
-| Control  | 23 | **PASS** 90.8% | — (C5 fixed, D128) | — |
-| Surface2 | 43 | **PASS** 70.4% | — (C6 fixed, D126) | — |
-| Surface1 | 36 | **PASS** 77.5% | — (C7 guarded, D127) | — |
+| Bunker1  | 09 | **PASS** (M-20: re-verified, 1800 frames crash-free, no `ge007.crash.log`, direct `-level_09` boot at ~90us/frame). The M-19 "boot crash `frames=0` PC `0x1400066fc`" did **not** reproduce on `1fc3cff6` in three separate runs → it was sweep flakiness / D117 nondeterminism under machine load, not a real regression. | -- |
+| Silo     | 20 | **PASS** 91.7% | -- | -- |
+| Archives | 24 | **PASS** 91.1% | -- | -- |
+| Train    | 25 | **PASS** 87.0% | -- | -- |
+| Caverns  | 39 | **PASS** 91.6% | -- | -- |
+| Egypt    | 32 | **PASS** 90.9% | -- | -- |
+| Cuba     | 54 | **PASS** 92.5% (loads+renders 300+ frames; bare-boot end-credits path `bondviewRenderCredits` still faults intermittently, D76/D129, not a real-flow blocker) | -- | -- |
+| Dam      | 33 | **PASS** 83.3% | -- (C1 fixed, D123) | -- |
+| Frigate  | 26 | **PASS** 90.4% | -- (C1 fixed, D123) | -- |
+| Statue   | 22 | **PASS** 80.1% | -- (C1 fixed, D123) | -- |
+| Streets  | 29 | **PASS** 91.6% | -- (C1 fixed, D123; no C2 crash this run, timing) | -- |
+| Cradle   | 41 | **PASS** 55.4% (low, partial render, no crash) | -- (C1 fixed, D123) | -- |
+| Runway   | 35 | **PASS** | -- (D130: `romdataFixupFont` glyph-relayout aliasing) | -- |
+| Facility | 34 | **PASS** (M-20 re-verified on an idle machine: frame 1500+, no crash. The M-20 mid-session "boot crash `frames=0`" was concurrent-load flakiness, three subagents/sessions sharing the box. Fix stands: D130.) | -- (D130: `romdataFixupFont` corrupted glyph `#`/`"` pixeldata → fast3d AV) | -- |
+| Jungle   | 37 | **PASS** (M-20 re-verified on an idle machine: frame 1500+, no crash. M-19/D131: 2400+ crash-free. The M-20 mid-session "frame-2 hang" was concurrent-load flakiness.) | -- (D131: `osVirtualToPhysical()` truncated a compiled `.bss` matrix ptr in `explosionRenderPropSmoke` → `seg_addr` now restores the module high word) | -- |
+| Aztec    | 28 | **PASS** 90.8% | -- (C3 fixed, D125) | -- |
+| Bunker2  | 27 | **PASS** 91.5% | -- (C3r fixed, D126) | -- |
+| Depot    | 30 | **PASS** 79.8% | -- (C4 fixed, D126) | -- |
+| Control  | 23 | **PASS** 90.8% | -- (C5 fixed, D128) | -- |
+| Surface2 | 43 | **PASS** 70.4% | -- (C6 fixed, D126) | -- |
+| Surface1 | 36 | **PASS** 77.5% | -- (C7 guarded, D127) | -- |
 
 **19 / 21** (M-19). D131 cleared C2m Jungle (explosion-DL `G_MTX` truncated
 compiled-symbol pointer). **But `-level_09` (Bunker1) regressed to a boot
-crash sometime between M-18 and now** — reproduces on clean master, so it
+crash sometime between M-18 and now**, reproduces on clean master, so it
 is not an M-19 change; bisect D125→HEAD. Net 20→19 until 09 is refixed.
 
-**(M-18) 20 / 21 PASS.** D130 cleared C2 Facility + Runway — the crash was
+**(M-18) 20 / 21 PASS.** D130 cleared C2 Facility + Runway, the crash was
 `romdataFixupFont` corrupting fontchar glyphs 0/1/2 (in-place 24→32B relayout
 aliases for low indices), NOT the model-GDL relocation the D124-Facility
 addendum suspected. Only Jungle (C2m, explosion-DL `G_MTX`, ~frame 300)
@@ -90,19 +90,19 @@ indices) cleared **C3r Bunker2 + C4 Depot + C6 Surface2** in one fix
 (`d88_propdefs.py` types 30/32/33/35 → 24B/6w). **D127** guarded a bogus
 ALSound* in the parked audio path → **C7 Surface1**. **D128** fixed a
 hardcoded-N64-stride portal-flag write → **C5 Control**. **3 crashes
-remain, all one class:** C2 Runway + Facility + C2m Jungle — the model /
+remain, all one class:** C2 Runway + Facility + C2m Jungle, the model /
 prop GDL relocation misaligns on the 8→16B `Gfx` stride
 (`docs/BRIEF-C2gdl-model-reloc.md`).
 
 Notes: Streets passed this run but the C1 agent saw a `gfx_sp_matrix`
-crash — likely the same explosion-DL `G_MTX` (C2m) as Jungle, timing-
-dependent (D117 nondeterminism). Cradle renders only 55% — watch for a
-partial-load issue when it gets a playtest. Frigate/Statue vary 68–90%
+crash, likely the same explosion-DL `G_MTX` (C2m) as Jungle, timing-
+dependent (D117 nondeterminism). Cradle renders only 55%, watch for a
+partial-load issue when it gets a playtest. Frigate/Statue vary 68-90%
 run to run.
 
 ## Crash classes (most-impactful first)
 
-### C1 — chr / AI-record pointer deref — FIXED (D123)
+### C1, chr / AI-record pointer deref, FIXED (D123)
 **RESOLVED.** Root cause: `tools_pc/d88_propdefs.py` (D122's `OBJ_TAIL_DESC`)
 zeroed the widened `VehichleRecord/AircraftRecord.ailist` slot instead of
 carrying its pre-populated int AI-list id, so `prop.c:1764/1786` →
@@ -114,37 +114,37 @@ Dam/Frigate/Statue/Cradle now PASS; Runway/Streets fall through to C2.
 
 `chrIsNotDeadOrShot(ChrRecord *self)` faults on `self->actiontype` with
 `self` bogus (Dam: Rdi=0x1401296a0 → an image address; fault addr 0x8).
-Reached from `chraidata.c:61` (`m_AimAtBond[]` AI-list region — backtrace
+Reached from `chraidata.c:61` (`m_AimAtBond[]` AI-list region, backtrace
 frame is inside the global AI-list rodata blob, i.e. the return address
 was corrupted OR an AI-list entry is being called as a function pointer).
 Pointer-width / BE-rodata family (porting-notes.md §A / §C): a per-level
 `Usetup*Z` guard record (`GuardRecord` type 9 / `GuardAttributeRecord`
 type 18) or chr-spawn pointer not converted / not pointer-width-adjusted,
 OR the AI-list bytecode pointers in `chraidata.c` rodata are BE and get
-called raw. **Biggest single win — 6 levels.**
+called raw. **Biggest single win, 6 levels.**
 
 </details>
 
-### C2 — fast3d bad texture pointer (D124) — SPLIT into two causes
-**Jungle (`0xabcd0824`) — FIXED (D124).** `gimgSyncCompiledGlobalDLs()`
+### C2, fast3d bad texture pointer (D124), SPLIT into two causes
+**Jungle (`0xabcd0824`), FIXED (D124).** `gimgSyncCompiledGlobalDLs()`
 never copied the resolved texture pointers into the compiled
 `globalDL_0xNNN` explosion DLs (slot-detect keyed on a marker `texLoad()`
 had already erased); the arrays kept link-time `IMAGESEG` words and the
 first explosion-DL draw fed `0xABCDxxxx` into fast3d. Latent on every
 level. Fix: `port/src/gimgfixup.c` detects the slot from the compiled
 array. Jungle now renders ~300 frames then hits a *separate* explosion-DL
-`G_MTX` crash (`gfx_sp_matrix` gfx_pc.cpp:1046 — D75/matrix family).
+`G_MTX` crash (`gfx_sp_matrix` gfx_pc.cpp:1046, D75/matrix family).
 
-**Facility (`0x72181ee8`) — NOT fixed, separate cause.** Bogus `G_SETTIMG`
+**Facility (`0x72181ee8`), NOT fixed, separate cause.** Bogus `G_SETTIMG`
 w1 in a model/prop GDL produced by the runtime `texLoadFromGdl()`
 relocation in `sub_GAME_7F0762E0` (`objecthandler_2.c:82`): its model-GDL
 output `dst` pointers are non-16-aligned (N64 8B vs PC 16B `Gfx` stride
 mix in the `replacementgdl`/`name` offset math). Open D80/D82/D83
-"model/room GDL runtime conversion unverified" area — shared infra, needs
+"model/room GDL runtime conversion unverified" area, shared infra, needs
 a dedicated pass. Files: `src/game/objecthandler_2.c`, `src/game/tex.c`
 (`texLoadFromGdl`), `src/game/model.c` (`modelNodeReplaceGdl`).
 
-**M-14 update (partial, still NOT fixed):** crash cmd pinned —
+**M-14 update (partial, still NOT fixed):** crash cmd pinned ,
 `G_SETTIMG w0=0xfd900000 w1=0x72181ee8` where `w1` is a garbage
 `tex->data` from the texture-pool path (`texLoadFromModelFileHeader` →
 `texLoad`), not solely the GDL command-stream copy. Every model file
@@ -154,7 +154,7 @@ Full write-up + next-step probe plan: findings.md §F D124-Facility
 addendum. Likely fix site: the `d43_emit.py`/`pcmodels` sidecar's model
 texture-blob offsets (N64 8B-Gfx vs PC 16B-Gfx GDL extent).
 
-### C3/C6 update (M-14/M-15, D125) — offline pipeline RULED OUT, bug is runtime
+### C3/C6 update (M-14/M-15, D125), offline pipeline RULED OUT, bug is runtime
 Symptom: converted `propDefs` blob in RAM does not match the offline output
 (after record 0 it is zeros/garbage), so the runtime `sizepropdef()` walk
 drifts and `setupDoor`/`modelLoad` get the wrong `pdefIndex`/modelid.
@@ -163,10 +163,10 @@ drifts and `setupDoor`/`modelLoad` get the wrong `pdefIndex`/modelid.
 byte-compares the emitted `pccg.bin` propDefs slice (post-RZ-roundtrip, at
 the relocated header offset) to `convert_stream()` → **MATCH for all 21
 levels**. The M-13 overseer hypothesis (pass-1 delta / `pd_end` mismatch in
-`d88_emit.py` ~L308–340) is **disproven**: instrumented run shows
+`d88_emit.py` ~L308-340) is **disproven**: instrumented run shows
 `tiled_pd_end == H[intro]` and `_n64len == pd_end - pd_start` exactly for
 all 21, next region always `intro`. `sizepropdef()` PORT strides re-checked
-vs `PROPDEF_PC_BYTES/4` — all 28 match.
+vs `PROPDEF_PC_BYTES/4`, all 28 match.
 
 **→ The corruption is at/after runtime load.** Prime suspect:
 `decompressdata()` truncation in `port/src/rzdecomp.c` for the larger
@@ -175,14 +175,14 @@ STAGE bank buffer / `langLoadToAddr` (`prop.c:1274`) overwriting the tail.
 Next step: probe `decompressdata()` `ret`/`produced` vs expected size for
 `UsetupsevbZ`. See §F/§H D125.
 
-### C3 — Aztec FIXED (D125); Bunker2 residual (C3r)
+### C3, Aztec FIXED (D125); Bunker2 residual (C3r)
 **Aztec** was D125 (boundpad plink-name blob drift from the
 `d88_emit.py:374` slice-width bug corrupting `stanPackId` → NULL stan →
 door `model=NULL`). Fixed + regen'd, Aztec PASSES.
 
-**Bunker2 (C3r)** — `door7F054FB4` `propobj.c:13536`, `var_s1` = `0xffff..`
+**Bunker2 (C3r)**, `door7F054FB4` `propobj.c:13536`, `var_s1` = `0xffff..`
 walked from `linkedDoor`. `door->linkedDoor` is resolved at setup from
-`door->linkedDoorOffset` (`prop.c:1204-1206`, N64 struct word 32 / 0x80) —
+`door->linkedDoorOffset` (`prop.c:1204-1206`, N64 struct word 32 / 0x80) ,
 a read-before-write int id, D123's `ailist` pattern. `d88_propdefs.py`'s
 DOOR handler (`DOOR_TAIL_PTR_WORDS`, tail loop from word 32) vs the
 compiled PC `DoorRecord` layout is the suspect: either `linkedDoorOffset`
@@ -193,33 +193,33 @@ never exercised this path. Needs `offsetof`/`sizeof` cross-check of PC
 `DoorRecord` vs the converter cursor. Files: `tools_pc/d88_propdefs.py`,
 `src/bondtypes.h` (DoorRecord), `src/game/prop.c`, `src/game/propobj.c`.
 
-### C4 — prop tile-walk room deref (1: Depot)
-`prop.c:902` — `*arg1 = sp4C->room` where `sp4C` came back bad from
+### C4, prop tile-walk room deref (1: Depot)
+`prop.c:902`, `*arg1 = sp4C->room` where `sp4C` came back bad from
 `walkTilesBetweenPoints_NoCallback`. Likely a BG tile/room table not
 converted for Depot. Files: `src/game/prop.c`, `src/game/bg.c`, BG
 sidecar.
 
-### C5 — bg portal points (1: Control)
-`bg.c:5723` — `portal_pts = g_BgPortals[idx].offset_portal; portal_pts->numPoints`.
+### C5, bg portal points (1: Control)
+`bg.c:5723`, `portal_pts = g_BgPortals[idx].offset_portal; portal_pts->numPoints`.
 `offset_portal` unresolved / BE. Via `chrprop.c:62` (chr line-of-sight
 through portals). Files: `src/game/bg.c`, BG portal sidecar.
 
-### C6 — modelLoad PitemZ header (1: Surface2)
-`loadobjectmodel.c:393` — `PitemZ_entries[modelid].header->RootNode`,
+### C6, modelLoad PitemZ header (1: Surface2)
+`loadobjectmodel.c:393`, `PitemZ_entries[modelid].header->RootNode`,
 `header` NULL / `modelid` OOB. Direct D122 continuation (prop/item model
 id from a propDef record). Fault addr 0x0. Files: `tools_pc/d88_propdefs.py`,
 `tools_pc/d43_emit.py`, `src/game/loadobjectmodel.c`.
 
-### C7 — sndSetupSound (1: Surface1)
+### C7, sndSetupSound (1: Surface1)
 `snd.c:653`. Audio is a parked subsystem (Phase 3) but this is a hard
 crash on load, not silence. May be dodge-able with a narrow guard until
 audio lands. Files: `src/snd.c`, `port/src/` audio stubs.
 
 ## Next (1 crash)
-1. **C2m** Jungle `-level_37` — renders ~300 frames then an explosion-DL
+1. **C2m** Jungle `-level_37`, renders ~300 frames then an explosion-DL
    `G_MTX` (`gfx_sp_matrix` gfx_pc.cpp:1046, fault 0x401c68e0), D75/matrix
    family. NOT related to D130 (Facility/Runway were a font-relayout bug, now
-   fixed). `docs/BRIEF-C2gdl-model-reloc.md` is now largely obsolete — its
+   fixed). `docs/BRIEF-C2gdl-model-reloc.md` is now largely obsolete, its
    model-GDL-relocation premise was disproven (D130); the Jungle crash is a
    compiled/explosion-DL matrix pointer, closer to D75/D124-Jungle territory.
 
@@ -245,9 +245,9 @@ hang. All retried on a settled machine where slow.
 | 09 | Bunker1  | PASS (VI pacemaker healthy, no crash; slow under load) |
 | 20 | Silo     | PASS (VI pacemaker healthy, no crash; slow under load) |
 | 23 | Control  | PASS (frame 600+, no crash) |
-| 32 | Egypt    | PASS (frame 600, no crash — first run was load-slow, clean on retry) |
+| 32 | Egypt    | PASS (frame 600, no crash, first run was load-slow, clean on retry) |
 | 54 | Cuba     | PASS (frame 1200+, no crash) |
-| 39 | Caverns  | PASS — **D158 (KF7 muzzle-flash `stackpad2[-8]`) holds**, fire no longer crashes |
+| 39 | Caverns  | PASS, **D158 (KF7 muzzle-flash `stackpad2[-8]`) holds**, fire no longer crashes |
 
 Earlier this session (per M-30 handoff), with-input PASS:
 Facility 34, Runway 35, Surface1 36, Frigate 26, Statue 22, Bunker2 27,
@@ -258,7 +258,7 @@ Surface2 43, Streets 29, Depot 30, Train 25, Jungle 37, Cradle 41, Aztec 28.
 ### stackpad / negative-stack-index audit
 `grep -rnE '\)\[-[0-9]|[a-z0-9_]\[-[0-9]+\]|stackpad' src/game/*.c src/*.c`:
 only `gunfire.c:830/836` (`((f32*)stackpad2)[-8]`) is a true decomp
-register-alloc stackpad hack — already fixed by D158 (`#ifdef PORT`
+register-alloc stackpad hack, already fixed by D158 (`#ifdef PORT`
 real local `kf7_flashscale`). `front.c:5246-47` declares `s32 stackpad;`
 locals but never negative-indexes them (benign, and front.c is off-limits).
 All other `[-N]` hits are legitimate pointer walks (`gun.c` spline

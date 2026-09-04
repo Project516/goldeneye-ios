@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include "n64mem.h"
 
 #include <PR/ultratypes.h>
 #include <PR/os.h>
@@ -103,7 +104,7 @@ u8 (*tlbmanageGetTlbAllocatedBlock(void))[TLB_BLOCK_SIZE]
      * area; the extra goes to MEMPOOL_STAGE (boss.c:218 gives STAGE
      * everything that isn't the fixed PERMANENT bank). Stays well clear of
      * animations_frame_buffer. */
-    return (u8 (*)[TLB_BLOCK_SIZE])0x70700000;
+    return (u8 (*)[TLB_BLOCK_SIZE])N64_TO_HOST(0x70700000u);
 }
 
 /* --- K&R libc helpers (IDO provided these; MinGW's libc does not) -------- */

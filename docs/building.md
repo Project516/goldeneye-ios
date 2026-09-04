@@ -42,8 +42,8 @@ The extraction scripts need `binutils-mips-linux-gnu` (or an equivalent MIPS
 binutils), `make`, `git`, and `python3`. They build a small host-compiled
 `tools/extractor` and slice blobs straight out of the ROM. **No IDO / IRIX
 toolchain is involved in extraction or in the PC build.** (The IDO toolchain is
-only needed to build the N64 ROM itself, and its proprietary SGI binaries are
-On Windows this is easiest under WSL or a Linux VM. Full details and
+only needed to build the N64 ROM itself, and its proprietary SGI binaries
+aren't distributed here.) On Windows this is easiest under WSL or a Linux VM.
 
 ---
 
@@ -67,7 +67,7 @@ and run:
 
 (US extraction is a prerequisite for the others.)
 
-This populates `assets/` with the generated `.bin` blobs the build needs. See
+This populates `assets/` with the generated `.bin` blobs the build needs.
 
 ---
 

@@ -44,6 +44,7 @@
 
 #include "platform.h"
 #include "system.h"
+#include "n64mem.h"
 #include "crash.h"   /* D38: crashDumpThreads() */
 #include "video.h"
 #include "audio.h"
@@ -342,24 +343,43 @@ void osCreateThread(OSThread *t, OSId id, void (*entry)(void *), void *arg,
 
 #if !defined(_WIN32)
 #include <sys/mman.h>
-/* The decomp aligns/compares stack-buffer pointers by truncating to u32
- * (e.g. `(u32)compbuffer` in image.c texLoad) — an N64 assumption. glibc
- * puts pthread stacks above 4 GiB, so those truncations corrupt. Force each
- * game-thread stack into the low 2 GiB with MAP_32BIT so every such idiom
- * works exactly as on the console. Windows pthread stacks are already low. */
+#include <unistd.h>
+/* The decomp aligns and compares stack-buffer pointers by truncating to u32
+ * (e.g. `(u32)compbuffer` in image.c texLoad), which is an N64 assumption.
+ * A stack anywhere else truncates to garbage, so put each game-thread stack
+ * inside the N64 window: the base is 4 GiB-aligned, so (u32)ptr yields the
+ * window offset and adding the base recovers the pointer.
+ *
+ * This replaces MAP_32BIT, which only ever existed on Linux and which Darwin
+ * does not have at all. The stacks sit in the gap between the cart image and
+ * the DRAM views. Verified on device by the suite C probe. */
+#define PORT_STACK_REGION 0x20000000ULL
+#define PORT_STACK_LIMIT  0x30000000ULL
+
+static pthread_mutex_t s_stackLock = PTHREAD_MUTEX_INITIALIZER;
+static uint64_t s_stackNext = PORT_STACK_REGION;
+
 static void *portAllocLowStack(size_t sz)
 {
-#if defined(MAP_32BIT)
-    void *p = mmap(NULL, sz, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT
-#if defined(MAP_STACK)
-                   | MAP_STACK
-#endif
-                   , -1, 0);
-    if (p != MAP_FAILED)
-        return p;
-#endif
-    return NULL;
+    long pagesz = sysconf(_SC_PAGESIZE);
+    if (pagesz <= 0) {
+        pagesz = 4096;
+    }
+    /* A guard page below each stack turns an overflow into a fault. */
+    size_t need = (sz + (size_t)pagesz * 2 - 1) & ~((size_t)pagesz - 1);
+
+    pthread_mutex_lock(&s_stackLock);
+    uint64_t off = s_stackNext;
+    if (off + need > PORT_STACK_LIMIT) {
+        pthread_mutex_unlock(&s_stackLock);
+        sysLogPrintf(LOG_ERROR, "port: out of stack space in the N64 window");
+        return NULL;
+    }
+    s_stackNext = off + need + (uint64_t)pagesz;
+    pthread_mutex_unlock(&s_stackLock);
+
+    void *p = n64memCommit(off, need);
+    return p;
 }
 #endif
 
@@ -793,15 +813,16 @@ static int s_d61opened = 0;
 
 static int dramHostAddrValid(uintptr_t addr, u32 size)
 {
-    static const uintptr_t bases[2] = { 0x70000000UL, 0x80000000UL };
-    for (int i = 0; i < 2; i++) {
-        if (addr >= bases[i] && addr + size <= bases[i] + 0x00800000UL)
-            return 1;
+    /* Anywhere inside the N64 window is by definition a legitimate target. */
+    if (n64memContains(addr, size)) {
+        return 1;
     }
-    /* Any other host-committed region is a legitimate DMA target: .bss/.data
-     * buffers (e.g. ramrom_data_target), stack compbuffers, sidecar images.
-     * Truncated wild addresses (0x40xxxxxx from s32 pointer math) are not
-     * committed, so VirtualQuery still catches them. */
+
+    /* Outside it, a real host buffer is still fine: .bss and .data scratch,
+     * stack compbuffers, sidecar images. What is not fine is a pointer that
+     * was truncated to 32 bits somewhere, because with the window up at
+     * 0x300000000 the low half lands on nothing. So the question is simply
+     * whether the range is mapped. */
 #if defined(PLATFORM_WINDOWS)
     {
         MEMORY_BASIC_INFORMATION mbi;
@@ -813,11 +834,24 @@ static int dramHostAddrValid(uintptr_t addr, u32 size)
     }
     return 0;
 #else
-    /* No cheap committed-memory probe on POSIX; this is a TEMP D60 diagnostic.
-     * Be permissive so legitimate .bss/stack/sidecar DMA targets are not
-     * flagged as fatal (a genuinely wild target still faults in the memcpy). */
-    (void)size;
-    return 1;
+    /* msync() reports ENOMEM for an unmapped range and costs nothing.
+     * Checking the first and last page catches both a wild pointer and a
+     * buffer that runs off the end of its mapping. */
+    {
+        long pagesz = sysconf(_SC_PAGESIZE);
+        if (pagesz <= 0) {
+            pagesz = 4096;
+        }
+        uintptr_t first = addr & ~(uintptr_t)(pagesz - 1);
+        uintptr_t last = (addr + (size ? size - 1 : 0)) & ~(uintptr_t)(pagesz - 1);
+        if (msync((void *)first, (size_t)pagesz, MS_ASYNC) != 0) {
+            return 0;
+        }
+        if (last != first && msync((void *)last, (size_t)pagesz, MS_ASYNC) != 0) {
+            return 0;
+        }
+        return 1;
+    }
 #endif
 }
 
@@ -896,7 +930,7 @@ static void piServiceDma(s32 direction, u32 srcPA, void *dstVA, u32 size)
             sysFatalError("D60: ROM-read target %p + 0x%X not host-mapped "
                           "(src=0x%08X)", dstVA, size, srcPA);
         }
-        memcpy(dstVA, (const void *)(uintptr_t)srcPA, size);
+        memcpy(dstVA, (const void *)N64_TO_HOST(srcPA), size);
     } else {
         /* OS_WRITE: the game never writes the cart (saves go to EEPROM via
          * osEeprom*, shimmed separately). Log and drop. */
@@ -1188,7 +1222,7 @@ void osWritebackDCacheAll(void)                    { }
 void osInvalICache(void *addr, int size)           { (void)addr; (void)size; }
 void osInvalDCache(void *addr, int size)           { (void)addr; (void)size; }
 u32   osVirtualToPhysical(void *va)                { return (u32)(uintptr_t)va; }
-void *osPhysicalToVirtual(u32 pa)                  { return (void *)(uintptr_t)pa; }
+void *osPhysicalToVirtual(u32 pa)                  { return N64_TO_HOST(pa); }
 
 /* ------------------------------------------------------------------------ */
 /* Misc                                                                      */

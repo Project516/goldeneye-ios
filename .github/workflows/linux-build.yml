@@ -5,7 +5,7 @@ name: linux-build
 # and artifacts on a public repo are downloadable by anyone.
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths-ignore:
       - 'docs/**'
       - '**/*.md'

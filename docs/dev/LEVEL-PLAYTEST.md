@@ -1,7 +1,7 @@
-# LEVEL-PLAYTEST — WS6 human completion-validation checklist
+# Level playtest, WS6 human completion-validation checklist
 
 Run **after** `docs/dev/LEVEL-STATUS.md` is all-21 load+render PASS. This is
-the part that needs real input — a human plays each level start to finish
+the part that needs real input, a human plays each level start to finish
 and confirms it matches retail. Findings feed a WS5-style triage round
 (log each as a crash-class row or a new Dxx candidate).
 
@@ -9,15 +9,15 @@ and confirms it matches retail. Findings feed a WS5-style triage round
 
 ```sh
 export PATH="/c/msys64/mingw64/bin:$PATH" && ./build-pc.sh ntsc-final
-./build-pc/ge007.x86_64.exe -level_XX          # bare — pools auto-injected (D121)
+./build-pc/ge007.x86_64.exe -level_XX          # bare, pools auto-injected (D121)
 ```
 
-Controls: `port/src/input.c` — keyboard+mouse or SDL gamepad. Mouse-look is
+Controls: `port/src/input.c`, keyboard+mouse or SDL gamepad. Mouse-look is
 mode-aware since M-24 (hold RMB = analog aim). **M-24 input/QoL changes +
 what to verify while playing: `docs/M-24-QOL-REVIEW.md`.** Tune feel in
 `data/ge007.ini` `[Input]` (`MouseAimSpeed` 50, `MouseTurnSpeed` 100,
 `MouseInvertY` 0) with the game closed. Known residual (do not re-log):
-D118a — hipfire pitch is digital vs analog yaw. **F12** = screenshot to
+D118a, hipfire pitch is digital vs analog yaw. **F12** = screenshot to
 `ppm/shot_NNN.ppm`. **Mouse wheel** = cycle weapon. **Alt-Enter** =
 fullscreen. Alt-tab away frees the cursor (re-grabs on focus). Title bar
 shows FPS.
@@ -47,7 +47,7 @@ Objective status: `src/game/objective_status.c`
 - Notes / defects:
 ```
 
-## 21 solo levels (mission order — numbers = `-level_XX`)
+## 21 solo levels (mission order, numbers = `-level_XX`)
 
 | # | Level | -level | Briefing asset |
 |---|---|---|---|
@@ -74,4 +74,4 @@ Objective status: `src/game/objective_status.c`
 | 21 | Cuba | 54 | (post-Egypt unlock) |
 
 (Mission table: `front.c:433`. Cuba = `LEVELID_CUBA`, not in the standard
-folder list — unlocked after Egypt.)
+folder list, unlocked after Egypt.)

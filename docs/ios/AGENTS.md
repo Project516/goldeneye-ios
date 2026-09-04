@@ -70,3 +70,45 @@ via the `upstream` remote.
 | `code/perfect_dark_pc` | mature, arm64-clean port of the sibling engine |
 | `code/sm64coopdx-ios` | the iOS packaging and touch-control template |
 | `code/SCInsta` | unsigned-IPA CI patterns |
+
+## Reading order
+
+Context is scarce. Load by tier, do not blind-read whole files.
+
+- Always: `AGENTS.md` (repo root) and this file.
+- Per task: `docs/porting-notes.md` for the recurring N64 to host bug classes.
+  Skim the headers, read the class you need.
+- On demand, never start to finish:
+  - `docs/internals.md` for architecture and the phased plan. Read the section
+    you need. 57 source comments point into it.
+  - `docs/dev/findings.md` for the `Dxx` log. Jump via the index at the top of
+    section F. 136 distinct `Dxx` labels appear in code comments.
+  - `docs/dev/LINUX-PORT.md` now that Linux is the verification platform.
+
+## Verifying a change
+
+The Linux build runs, so use it. Do not rely on a clean compile.
+
+```sh
+cmake -S . -B build-pc -DROMID=ntsc-final && cmake --build build-pc -j"$(nproc)"
+DISPLAY=:0 ./build-pc/ge007.x86_64
+```
+
+It should reach the front end and render. For memory work, watch for
+`n64mem:` and `D60` lines, which report the window and any rejected DMA target.
+
+## Dispatching a subagent
+
+Every brief needs all of: the exact files it may touch, disjoint from any
+other running agent; a budget in cycles or minutes; what to do on expiry;
+what is already ruled out; and the shape of the report. Tell it to read
+`docs/porting-notes.md` first and to append anything generalisable to it.
+
+## Upstream
+
+This is a hard fork. It does not track or merge
+[goldeneye-pc-port](https://github.com/jkdansereau/goldeneye-pc-port), and the
+squashed import means `git cherry-pick` will not work. Individual upstream
+fixes are still worth porting by hand, roughly monthly. The reference clone is
+`code/goldeneye-pc-port` (gitignored). Diff the file, apply the change, and
+credit the upstream commit in the message, as the Linux bring-up fixes did.

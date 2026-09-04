@@ -1,3 +1,7 @@
+#ifdef PORT
+#include <stdio.h>
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include <deb.h>
 #include "memp.h"
@@ -43,8 +47,22 @@ void mempCheckMemflagTokens(s32 poolAreaStart, s32 poolAreaSize)
 
     //set pool 0 to what boss wants (room_model_buffer)
     //pool 0 = TotalPoolArea
+#ifdef PORT
+    /* The caller works in N64 addresses (boss.c seeds this from
+     * PHYS_TO_K0(osVirtualToPhysical(_bssSegmentEnd))), but MemoryPool holds
+     * real u8* pointers. On the identity mapping those were the same number.
+     * With DRAM up in the window they are not, so convert once here: every
+     * other bank derives from MEMPOOL_TOTAL.start below, and every allocation
+     * hands back a genuine host pointer. */
+    {
+        u8 *base = (u8 *)N64_TO_HOST((u32)poolAreaStart);
+        g_mempPools[MEMPOOL_TOTAL].start = base;
+        g_mempPools[MEMPOOL_TOTAL].end = base + poolAreaSize;
+    }
+#else
     g_mempPools[MEMPOOL_TOTAL].start = poolAreaStart;
     g_mempPools[MEMPOOL_TOTAL].end = poolAreaStart + poolAreaSize;
+#endif
 
     poolSizes = sdefaultmvals;
 
@@ -91,7 +109,14 @@ void mempSetBankStarts(s32 poolSizes[MEMPOOL_COUNT+1])
     s32 bankstarts[MEMPOOL_COUNT] = {0};
     s32 mempLen;
     s32 mempRequested;
+#ifdef PORT
+    /* Holds MEMPOOL_TOTAL.start, which is a real host pointer now that DRAM
+     * lives in the window. An s32 truncates it and every bank below inherits
+     * the wrong base. */
+    u8 *mempStart;
+#else
     s32 mempStart;
+#endif
 
     //set MF, ML, ME first
     i = 0;

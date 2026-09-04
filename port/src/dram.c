@@ -51,6 +51,7 @@
 
 #include "platform.h"
 #include "system.h"
+#include "n64mem.h"
 
 #if defined(PLATFORM_WINDOWS)
 #include <windows.h>
@@ -134,35 +135,11 @@ void *dramReserve(void)
     dramBindSymbols(v1);
     return v1;
 #else
-    /* memfd + two MAP_SHARED mmaps = one backing store, two views. */
-    int fd = memfd_create("ge007_dram", 0);
-    if (fd < 0) {
-        sysFatalError("dram: memfd_create failed");
-    }
-    if (ftruncate(fd, DRAM_SIZE) != 0) {
-        sysFatalError("dram: ftruncate failed");
-    }
+    /* Inside the window: commit V1, then alias the KSEG0 view onto the same
+     * pages. n64memAlias proves the sharing before returning. */
+    void *v1 = n64memCommit(DRAM_V1_BASE, DRAM_SIZE);
+    n64memAlias(DRAM_V1_BASE, DRAM_K0_BASE, DRAM_SIZE);
 
-    void *v1 = mmap((void *)DRAM_V1_BASE, DRAM_SIZE, PROT_READ | PROT_WRITE,
-                    MAP_SHARED | MAP_FIXED, fd, 0);
-    if (v1 == MAP_FAILED || v1 != (void *)DRAM_V1_BASE) {
-        sysFatalError("dram: could not map DRAM at %p", (void *)DRAM_V1_BASE);
-    }
-
-    void *v2 = mmap((void *)DRAM_K0_BASE, DRAM_SIZE, PROT_READ | PROT_WRITE,
-                    MAP_SHARED | MAP_FIXED, fd, 0);
-    if (v2 == MAP_FAILED || v2 != (void *)DRAM_K0_BASE) {
-        sysFatalError("dram: could not map KSEG0 mirror at %p",
-                      (void *)DRAM_K0_BASE);
-    }
-
-    ((volatile char *)v1)[0] = 0x5A;
-    if (((volatile char *)v2)[0] != 0x5A) {
-        sysFatalError("dram: V1/V2 views do not share a backing store");
-    }
-    ((volatile char *)v1)[0] = 0;
-
-    close(fd);
     dramBindSymbols(v1);
     return v1;
 #endif

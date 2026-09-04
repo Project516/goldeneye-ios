@@ -1,5 +1,6 @@
 #define NOMINMAX
 
+#include "n64mem.h"
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -2636,7 +2637,7 @@ static inline void *seg_addr(uintptr_t w1) {
     // in the reserved N64-DRAM region (port/src/dram.c); map it back. The
     // region is 8 MB, so any offset below 0x800000 came from there.
     if (w1 < 0x800000) {
-        return (void *)(w1 + 0x80000000);
+        return N64_TO_HOST(w1 + 0x80000000);
     }
     // D131: a GBI DL built by game code can reference a COMPILED symbol via
     // osVirtualToPhysical() (a u32-returning shim), which truncates the
@@ -2655,7 +2656,7 @@ static inline void *seg_addr(uintptr_t w1) {
             return (void *)(mod_hi | w1);
         }
     }
-    return (void *)w1;
+    return N64_TO_HOST(w1);
 }
 
 uintptr_t clearMtx;

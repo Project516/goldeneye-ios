@@ -20,7 +20,15 @@ static void langFixupLoadedBank(char *name, void *p)
 
 // bss
 //CODE.bss:8008C640
+#ifdef PORT
+/* These hold real pointers to loaded text banks. An s32 array truncated them
+ * once DRAM moved into the window, so hold them as pointers. Only this file
+ * touches the array, and every use is an assignment, a NULL test, or a
+ * dereference, all of which work unchanged. */
+void *g_LangBanks[45];
+#else
 s32 g_LangBanks[45];
+#endif
 
 
 //CODE.bss:8008C6F4

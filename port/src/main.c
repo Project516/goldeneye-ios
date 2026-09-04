@@ -23,6 +23,7 @@
 
 #include "platform.h"
 #include "system.h"
+#include "n64mem.h"
 #include "config.h"
 #include "fs.h"
 #include "romdata.h"
@@ -101,36 +102,18 @@ int main(int argc, char **argv)
     configLoad();
     atexit(portAtExit);   /* persist config + window geometry on clean exit */
 
-    /* 2. Load the ROM and map segments. */
+    /* 2. Reserve the N64 address window, before anything maps into it. */
+    n64memReserve();
+
+    /* 2a. Load the ROM and map segments. */
     if (romdataInit() != 0) {
         sysLogPrintf(LOG_ERROR, "Failed to load ROM (expected a .z64 in the "
                     "data/ dir, see README)");
         return 1;
     }
 
-    /* 2a. Sanity: the image MUST have loaded at its preferred base.
-     *     dram_syms.s absolute symbols are referenced through pointer-typed
-     *     externs, which on x86-64/PE become .refptr slots with BASE
-     *     relocations. The build disables ASLR (--disable-dynamic-base) so the
-     *     loader loads at 0x140000000 and those relocations are no-ops; if we
-     *     ever got relocated, every such slot would be silently corrupted.
-     *     Fail loudly instead. */
-#if defined(PLATFORM_WINDOWS)
-    if (sysImageBase() != 0x140000000ul) {
-        sysLogPrintf(LOG_ERROR,
-            "image loaded at %p, expected preferred base 0x140000000; "
-            "absolute DRAM symbols would be corrupted (ASLR must be off)",
-            (void *)sysImageBase());
-        return 1;
-    }
-#else
-    /* Linux/ELF no-PIE: dram_syms.s absolute symbols resolve to their literal
-     * values independent of the image base (no .refptr indirection), so the
-     * load address is not constrained. sysImageBase() is a stub here anyway. */
-#endif
-
-    /* 2b. Reserve the N64-DRAM region: s32-safe view @ 0x70000000 (cfb_16,
-     *     mempools) + KSEG0 mirror @ 0x80000000 (see port/src/dram.c). */
+    /* 2b. Commit DRAM inside the window: the s32-safe view holding cfb_16 and
+     *     the mempools, plus its KSEG0 mirror (see port/src/dram.c). */
     dramReserve();
 
     /* 3. Video / audio / input. */
