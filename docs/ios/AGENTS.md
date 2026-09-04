@@ -109,6 +109,19 @@ what is already ruled out; and the shape of the report. Tell it to read
 This is a hard fork. It does not track or merge
 [goldeneye-pc-port](https://github.com/jkdansereau/goldeneye-pc-port), and the
 squashed import means `git cherry-pick` will not work. Individual upstream
-fixes are still worth porting by hand, roughly monthly. The reference clone is
-`code/goldeneye-pc-port` (gitignored). Diff the file, apply the change, and
-credit the upstream commit in the message, as the Linux bring-up fixes did.
+fixes are still worth porting by hand, roughly monthly. Diff the file, apply
+the change, and credit the upstream commit in the message, as the Linux
+bring-up fixes did.
+
+To review what is new upstream:
+
+```sh
+git remote add upstream https://github.com/jkdansereau/goldeneye-pc-port.git
+git fetch upstream --tags
+git log --oneline <last-sync>..upstream/master
+```
+
+Import base: `e4fc9dd0`. Synced through: **`v0.1.0` (`cbed324d`, 2026-09-04)**
+-- the two code fixes in that tag (D188 `va_list*`, D189 stack overruns) were
+already here from upstream's unmerged branches, so the sync took docs only.
+Update this line on every sync.

@@ -606,6 +606,59 @@ silently disappears.
   (the missing primitive is often small). Needs an `-O2` build + an eyeball
   or a targeted crop diff.
 
+## D7. `va_list` is an ARRAY type on x86-64 SysV, so never take `&` of a by-value `va_list` param
+
+On Windows x64 `va_list` is a scalar (`char *`), so passing a `va_list`
+parameter by value and later taking its address (`&args`) to hand a helper a
+"pointer to the list" happens to work. On the **x86-64 System V ABI**
+(Linux/macOS) `va_list` is `__va_list_tag[1]`, an array, so a by-value
+`va_list` parameter has already decayed to `__va_list_tag *`. `&args` is then
+the address of the *local pointer slot*, not the argument list, and a helper
+doing `va_arg(*args, ...)` walks garbage and segfaults. Latent at `-Og`, fatal
+at `-O2`.
+
+- Instance: **D188**. The IDO printf engine `_Printf`
+  (`src/libultrare/libc/xprintf.c`) passed `&args` to `_Putfld`; it crashed at
+  boot on Linux `-O2` via `bossInitMainthreadData` -> `sprintf`. Fix: under
+  `#ifdef PORT`, thread a real `va_list *` from the top (`sprintf.c` passes
+  `&args` of an actual `va_list` object; `_Printf` takes `va_list *` and passes
+  it straight through). `#else` keeps the ROM-matching body.
+- Rule: to share one arg walk between functions, pass `va_list *` explicitly
+  from the outermost `va_start` scope. Never `&` a `va_list` that arrived as a
+  parameter. `va_copy` into a fresh local is the other portable option when the
+  callee must not disturb the caller's position.
+- Same "works on MinGW, UB on SysV, exposed at `-O2`" shape as D6. Suspect this
+  class for any Linux-only crash whose backtrace runs through
+  `xprintf`/`_Putfld`/`vsnprintf`-alikes.
+
+## D8. Latent fixed-size stack-buffer over/under-runs, fatal only under a stack protector
+
+The decomp has a class of local scratch buffers that game code writes a few
+slots past (or before) the declared bounds, e.g. a traversal stack whose bail
+check is looser than its array size, or `&buf[i*3]` with `i` starting at -1.
+The N64 build and the MinGW/Windows build have **no stack protector**, so the
+overrun lands in adjacent stack scratch and is in practice harmless; the
+Windows build is stable over thousands of frames. **Ubuntu's gcc default is
+`-fstack-protector-strong`**, which places a canary right after the buffer and
+turns every such overrun into a fatal `*** stack smashing detected ***`
+`__stack_chk_fail`.
+
+- Instances (D189): `stan.c` `sub_GAME_7F0B1DDC` `StandTile *tileStack[39]`
+  (bail is `if (cat >= 41)`, checked once per outer loop, so it writes
+  `[40..]`); `bondview2.c` `bondviewCalcIntroSwirlCamera` `f32 pointbuf[10]`
+  written `[-3 .. 11]`.
+- Fix policy: **`-fno-stack-protector` globally** (`CMakeLists.txt`) so Linux
+  matches the N64 and MinGW builds. The code is byte-matched to the ROM and
+  cannot be "fixed" per site without diverging. Where a case is cleanly bounded
+  and the buffer is pure local scratch (never escapes, no ABI role), widening
+  it under `#ifdef PORT` is also fine (`tileStack[64]`).
+- A hardened Linux build (re-enabling the protector) would need the whole class
+  swept first. Grep heuristic for new instances: any Linux-only
+  `__stack_chk_fail` / `__fortify_fail` in the backtrace, in a `sub_GAME_*` or
+  other byte-matched function, during stage load or the first few frames.
+- Distinct from D7 (`va_list` UB) and D6 (missing `return`) but the same "works
+  on N64 and MinGW, fatal on hardened Linux" shape.
+
 ## E. Process / method notes
 
 - Investigation loop is: reproduce → env-gated capped probe → root-cause

@@ -68,6 +68,11 @@ build/*
 build-*/*
 notes/*
 
+# Local working / planning notes: rolling drafts, not published, not tracked.
+docs/HANDOFF.md
+docs/BACKLOG.md
+docs/dev/notes/
+
 # PC port (see CMakeLists.txt / port/)
 build-pc/
 tools_pc/*.exe
