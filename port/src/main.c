@@ -82,6 +82,22 @@ static void portAtExit(void)
     configSave();
 }
 
+#if defined(PLATFORM_IOS)
+/*
+ * On iOS the real main() lives in libSDL2main.a and does
+ * SDL_UIKitRunApp(argc, argv, SDL_main), which is what creates the
+ * UIApplication and its run loop. A plain main() here satisfies the _main
+ * symbol itself, so SDL's is never linked, there is no UIApplication, and
+ * iOS leaves the launch screen up forever. UILaunchScreen is an empty dict,
+ * so that shows as a solid black screen with no crash and no log.
+ *
+ * SDL_main.h does this rename with a macro, but it drags SDL_stdinc.h
+ * through the decomp's header shims, and this file includes no SDL at all.
+ * Do the rename by hand instead.
+ */
+#define main SDL_main
+#endif
+
 int main(int argc, char **argv)
 {
     sysSetArgs(argc, argv);
