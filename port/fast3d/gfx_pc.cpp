@@ -2069,7 +2069,10 @@ static void gfx_sp_moveword(uint8_t index, uint16_t offset, uintptr_t data) {
         case G_MW_SEGMENT:
             // GE registers segment bases as OS_K0_TO_PHYSICAL(ptr); store the
             // live host pointer so seg_addr() resolves seg+offset correctly.
-            segmentPointers[(offset >> 2) & 0xff] = (data < 0x800000) ? (data + 0x80000000) : data;
+            /* Store host pointers: seg_addr adds an offset and returns the
+             * result directly, so the base has to be folded in here. */
+            segmentPointers[(offset >> 2) & 0xff] =
+                (uintptr_t)N64_TO_HOST((data < 0x800000) ? (data + 0x80000000) : data);
             break;
     }
 }

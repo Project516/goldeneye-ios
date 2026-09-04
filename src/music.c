@@ -882,7 +882,13 @@ void musicTrack1Play(s32 track)
     t3 = ALIGN16_a(g_musicTrackLength[g_musicXTrack1CurrentTrackNum]) + ALIGN16_a(NUM_MUSIC_TRACKS);
     trackSizeBytes = ALIGN16_a(g_musicTrackCompressedLength[g_musicXTrack1CurrentTrackNum]);
     thing.seqData = g_musicXTrack1SeqData;
+#ifdef PORT
+    /* seqData is a real alHeapAlloc pointer; (s32) drops its high half. The
+     * arithmetic is a plain byte offset, so keep it on the pointer. */
+    temp_a0 = (u8 *)thing.seqData + (t3 - trackSizeBytes);
+#else
     temp_a0 = (u8*)((t3 + (s32)thing.seqData) - trackSizeBytes);
+#endif
 
     romCopy(temp_a0, romAddress, trackSizeBytes);
     decompressdata(temp_a0, thing.seqData, &hlist);
@@ -1076,7 +1082,13 @@ void musicTrack2Play(s32 track)
     t3 = ALIGN16_a(g_musicTrackLength[g_musicXTrack2CurrentTrackNum]) + ALIGN16_a(NUM_MUSIC_TRACKS);
     trackSizeBytes = ALIGN16_a(g_musicTrackCompressedLength[g_musicXTrack2CurrentTrackNum]);
     thing.seqData = g_musicXTrack2SeqData;
+#ifdef PORT
+    /* seqData is a real alHeapAlloc pointer; (s32) drops its high half. The
+     * arithmetic is a plain byte offset, so keep it on the pointer. */
+    temp_a0 = (u8 *)thing.seqData + (t3 - trackSizeBytes);
+#else
     temp_a0 = (u8*)((t3 + (s32)thing.seqData) - trackSizeBytes);
+#endif
 
     romCopy(temp_a0, romAddress, trackSizeBytes);
     decompressdata(temp_a0, thing.seqData, &hlist);
@@ -1269,7 +1281,13 @@ void musicTrack3Play(s32 track)
     t3 = ALIGN16_a(g_musicTrackLength[g_musicXTrack3CurrentTrackNum]) + ALIGN16_a(NUM_MUSIC_TRACKS);
     trackSizeBytes = ALIGN16_a(g_musicTrackCompressedLength[g_musicXTrack3CurrentTrackNum]);
     thing.seqData = g_musicXTrack3SeqData;
+#ifdef PORT
+    /* seqData is a real alHeapAlloc pointer; (s32) drops its high half. The
+     * arithmetic is a plain byte offset, so keep it on the pointer. */
+    temp_a0 = (u8 *)thing.seqData + (t3 - trackSizeBytes);
+#else
     temp_a0 = (u8*)((t3 + (s32)thing.seqData) - trackSizeBytes);
+#endif
 
     romCopy(temp_a0, romAddress, trackSizeBytes);
     decompressdata(temp_a0, thing.seqData, &hlist);
