@@ -277,9 +277,32 @@ VI post and dies in `gfx_run_dl` (`port/fast3d/gfx_pc.cpp:2679`, the
 under both `/usr/bin/gcc` and the ccache shim, so it is the tree and not the
 toolchain.
 
-It was working at `ffb9b76` ("Move thread stacks clear of the image range"),
-verified by a 90 second `-level_09` run. Only two commits since then touch
-anything Linux compiles, so bisect should be quick:
+Two things narrow this, both learned after the note above was written.
+
+**The two suspects are cleared.** `PORT_REAL_ZLIB_H` resolves to
+`/usr/include/zlib.h` and `PORT_HOST_STDDEF_H` to the compiler's own
+`stddef.h`, both correct, so `18fe877` is not it. And the `_GNU_SOURCE` that
+`6bd9b27` removed was already dead: `dram.c` gained `#include <ultra64.h>`
+above it during the symbol-binding work, so it no longer preceded the system
+headers and had stopped doing anything. Deleting the stale config
+(`data/ge007.ini`) changes nothing either.
+
+**`ffb9b76` itself is now the prime suspect, because the verification after it
+was too narrow.** That commit moved the thread stacks from window offset
+`0x20000000` to `0x30000000`, and the only run afterwards was `-level_09`,
+which skips the front end. The 180 second front-end run that passed was from
+*before* it. So the front end may have been broken by that commit and simply
+never exercised. Test `ffb9b76` with a plain front-end run first; if it fails
+there, the stack move is the culprit and the region needs choosing more
+carefully against what `seg_addr` decodes.
+
+The crash detail supports something address-shaped rather than a header
+problem: `gfx_run_dl` faults reading `cmd->words.w0` after being called
+*recursively* from the `G_DL` case, so a nested display-list address resolved
+to something unmapped. That is `seg_addr` returning a bad pointer, not a
+compile-time issue.
+
+Original note, kept because the recipe is still the right one:
 
 - `6bd9b27` dropped `#define _GNU_SOURCE` from `port/src/dram.c`. Should be
   inert, since `memfd_create` moved to `n64mem.c`, but glibc gates some
