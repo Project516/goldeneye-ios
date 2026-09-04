@@ -189,6 +189,29 @@ void sysCpuRelax(void)
 
 static char exeDir[512] = ".";
 
+#if defined(PLATFORM_IOS)
+#include <sys/stat.h>
+
+/*
+ * The app's Documents directory. On iOS the working directory is not writable
+ * and is nowhere near the app container, so this is where everything the port
+ * reads or writes has to live: the user's own .z64, the converted asset
+ * sidecars, ge007.ini and the EEPROM file. It is also the one directory the
+ * user can reach, which is what UIFileSharingEnabled in Info.plist exposes to
+ * the Files app. HOME is the container root on iOS.
+ */
+static const char *iosDocumentsDir(void)
+{
+    static char dir[1024] = "";
+    if (!dir[0]) {
+        const char *home = getenv("HOME");
+        snprintf(dir, sizeof(dir), "%s/Documents", home ? home : ".");
+        mkdir(dir, 0755);
+    }
+    return dir;
+}
+#endif
+
 const char *sysGetExeDir(void)
 {
 #if defined(PLATFORM_WINDOWS)
@@ -212,10 +235,21 @@ const char *sysGetExeDir(void)
  * $S: "data/" next to the CWD if it exists there, else "data/" next to the
  *     executable (so running build-pc/ge007.*.exe from anywhere finds
  *     ./data/ when run from the repo root).
+ *
+ * On iOS both prefixes resolve into the app's Documents directory instead,
+ * because nothing else in the container is both writable and reachable by the
+ * user. See iosDocumentsDir().
  */
 const char *sysResolvePath(const char *path)
 {
     static char out[1024];
+#if defined(PLATFORM_IOS)
+    /* Both roots collapse onto Documents; see iosDocumentsDir(). */
+    if (!strncmp(path, "$E/", 3) || !strncmp(path, "$S/", 3)) {
+        snprintf(out, sizeof(out), "%s/%s", iosDocumentsDir(), path + 3);
+        return out;
+    }
+#endif
 #if defined(PLATFORM_WINDOWS)
     static char exedir[1024] = "";
     if (!exedir[0]) {
