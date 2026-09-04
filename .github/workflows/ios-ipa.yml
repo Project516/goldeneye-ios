@@ -120,6 +120,17 @@ jobs:
           zip -qry goldeneye-ios.ipa Payload
           ls -la goldeneye-ios.ipa
 
+      # The converted sidecars cannot be produced on the device, so they ship
+      # alongside the IPA. Paths are top-level on purpose: sysResolvePath maps
+      # "$S/" to Documents on iOS, and the port looks for
+      # "pccg-<region>/pccg.bin", so the archive extracts straight into
+      # Documents.
+      - name: Package the asset sidecars
+        run: |
+          tar -czf goldeneye-ios-assets.tar.gz \
+            -C data pccg-ntsc-final pcmodels-ntsc-final
+          ls -la goldeneye-ios-assets.tar.gz
+
       - name: Drop the ROM and the converted assets
         run: rm -rf baserom.u.z64 assets data Payload
 
@@ -127,8 +138,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.IPA_DROP_TOKEN }}
           TAG: ${{ inputs.tag || format('ios-{0}', github.run_number) }}
+          SHA: ${{ github.sha }}
         run: |
-          gh release create "$TAG" goldeneye-ios.ipa \
+          cat > notes.md <<EOF
+          Unsigned IPA from goldeneye-ios $SHA.
+
+          1. Open \`goldeneye-ios.ipa\` in SideStore. It re-signs on device.
+          2. In Files, go to On My iPhone > GoldenEye and put your own
+             \`ge007.ntsc-final.z64\` (or \`baserom.u.z64\`) there.
+          3. Extract \`goldeneye-ios-assets.tar.gz\` into that same folder, so
+             \`pccg-ntsc-final/\` and \`pcmodels-ntsc-final/\` sit next to the
+             ROM. These are converted from the ROM at build time and cannot be
+             produced on the device.
+
+          The renderer still targets desktop GL, so expect this to fail at
+          renderer init rather than to play.
+          EOF
+          gh release create "$TAG" \
+            goldeneye-ios.ipa goldeneye-ios-assets.tar.gz \
             --repo Project516/goldeneye-ios-builds \
             --title "goldeneye-ios $TAG" \
-            --notes "Unsigned IPA from goldeneye-ios ${{ github.sha }}. Open in SideStore, then put your own GoldenEye.z64 in the app's Documents folder."
+            --notes-file notes.md
