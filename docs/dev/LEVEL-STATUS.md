@@ -7,17 +7,20 @@ auto-injected, D121), `GE_PCDUMP="80-260:40"`, ~24 s watchdog then
 0x140000000). "render %" = `tools_pc/pixcount.py` non-clear on the last
 captured frame. Binary at `f2beae4b` + this session's build.
 
-**iOS fork, 2026-09-04: 20 / 22 solo levels load and render on Linux.** Full
-sweep, 22 s offscreen per level via `tools_pc/run-headless.sh`, judged on
-frames rendered. Two failures:
+**iOS fork, 2026-09-04: 21 / 22 solo levels load and render on Linux.** Full
+sweep via `tools_pc/sweep.sh`, 22 s offscreen per level, judged on frames
+rendered, binary sha1 `4b353cb9` unchanged throughout. One failure:
 
 | Level | Result |
 |---|---|
-| `-level_37` JUNGLE | crashes after 5 frames |
 | `-level_40` CITADEL | hangs, 0 frames, 3 heartbeat reports |
 
 Everything else renders with zero crashes and no heartbeat warnings. Counts
 shown as `300+` are the every-300-frames log floor, not a stall.
+
+`-level_37` JUNGLE passed this sweep. It had been crashing after 5 frames in
+the morning run, and was fixed somewhere in the day's truncation work without
+being aimed at specifically.
 
 Before this morning **every** level rendered zero frames: the stage mempool
 was exhausted by a truncated pointer defeating the allocation shrink, with

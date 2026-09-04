@@ -301,16 +301,30 @@ What cleared the last of it, after the Mach-O assembly work:
 **The renderer.** `port/fast3d/gfx_opengl.cpp` targets desktop GL and iOS has
 none, so expect the app to launch and fail at renderer init.
 
-It is a smaller job than the doc used to imply. `gfx_opengl.cpp` is already
-close to the Perfect Dark original including its GLES accommodations, the
-shader preamble is built from a runtime `gl_glsl_version_str` that already has
-an `"%d es"` form, and `gfx_sdl2.cpp` already lists
-`SDL_GL_CONTEXT_PROFILE_ES` 3.0 among the contexts it will try. The real work
-is `glad`, a desktop GL loader whose headers declare entry points GLES does
-not have.
+It is a much smaller job than the doc used to imply, because the ES path
+mostly already exists. An audit of every `gl*` entry point `gfx_opengl.cpp`
+calls, against GLES 3.0:
 
-Do not guess at what fails. The app builds and installs now, so get a launch
-and read what it actually says.
+- All but three are GLES 2 or 3 core, including the ones that look risky:
+  `glBlitFramebuffer`, `glRenderbufferStorageMultisample`, `glReadBuffer`,
+  `glGenVertexArrays`/`glBindVertexArray`, `glPolygonOffset`.
+- The three that are not are already handled at runtime.
+  `glDepthRange` sits behind `if (glDepthRangef)`, both
+  `glDebugMessageControl` and `glDebugMessageCallback` behind `!= NULL`, and
+  `GL_MIRROR_CLAMP_TO_EDGE` is downgraded to `GL_MIRRORED_REPEAT` when
+  unsupported.
+- The shader generator has a complete ES path: a `gl_es` flag, a
+  `precision mediump float;` line in both stages, `in`/`out` versus
+  `attribute`/`varying`, and `texture()` versus `texture2D()`.
+
+So the remaining unknowns are narrow: whether `glad`, a desktop GL loader,
+behaves against an ES context, and whether the GLSL that comes out actually
+compiles on a real driver. `gfx_sdl2.cpp` now asks for ES 3.0 and only ES 3.0
+on iOS, with no fallback, so a context problem says so instead of handing back
+an ES 2 context the GLSL 130 path cannot use.
+
+Do not guess further. The app builds and installs now, so get a launch and
+read what it actually says.
 
 ## A regression worth remembering
 

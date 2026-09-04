@@ -163,6 +163,18 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
     }
 #endif
 
+#if defined(PLATFORM_IOS)
+    // iOS has GLES and nothing else. Trying the desktop entries first would
+    // create and tear down a UIWindow per failed attempt, and a
+    // COMPATIBILITY request can come back as ES 2, which the shader
+    // generator's GLSL 130 path cannot use. There is no fallback on purpose:
+    // failing here with "es3" named in the message is better information
+    // than a context that half works.
+    static u32 glver[][3] = {
+        { 0, 0, 0                         }, // for command line override
+        { 3, 0, SDL_GL_CONTEXT_PROFILE_ES },
+    };
+#else
     // ideally we need 3.0 compat
     // if that doesn't work, try 3.2 core in case we're on mac, 2.1 compat as a last resort
     static u32 glver[][3] = {
@@ -173,6 +185,7 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
         { 3, 0, SDL_GL_CONTEXT_PROFILE_ES            }, // es3: don't really support ES properly, but we can try
         { 2, 1, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY }, // 2.1: absolute last resort, will still require GLSL130 as an extension
     };
+#endif
 
     u32 verstart = 1;
     const u32 verend = sizeof(glver) / sizeof(*glver);
