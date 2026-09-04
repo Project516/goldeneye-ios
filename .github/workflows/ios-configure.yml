@@ -12,6 +12,8 @@ on:
       - 'CMakeLists.txt'
       - 'cmake/**'
       - 'port/**'
+      - 'src/**'
+      - 'include/**'
       - '.github/workflows/ios-configure.yml'
   workflow_dispatch:
 
