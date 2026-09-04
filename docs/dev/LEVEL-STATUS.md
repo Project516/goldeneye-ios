@@ -7,20 +7,21 @@ auto-injected, D121), `GE_PCDUMP="80-260:40"`, ~24 s watchdog then
 0x140000000). "render %" = `tools_pc/pixcount.py` non-clear on the last
 captured frame. Binary at `f2beae4b` + this session's build.
 
-**iOS fork, 2026-09-04: 21 / 22 solo levels load and render on Linux.** Full
+**iOS fork, 2026-09-04: all 21 solo levels load and render on Linux.** Full
 sweep via `tools_pc/sweep.sh`, 22 s offscreen per level, judged on frames
-rendered, binary sha1 `4b353cb9` unchanged throughout. One failure:
+rendered, binary sha1 `4b353cb9` unchanged throughout. Zero crashes, zero
+heartbeat warnings, no exceptions. Counts shown as `300+` are the
+every-300-frames log floor, not a stall.
 
-| Level | Result |
-|---|---|
-| `-level_40` CITADEL | hangs, 0 frames, 3 heartbeat reports |
+`-level_37` JUNGLE passed. It had been crashing after 5 frames in the morning
+run, and was fixed somewhere in the day's truncation work without being aimed
+at specifically.
 
-Everything else renders with zero crashes and no heartbeat warnings. Counts
-shown as `300+` are the every-300-frames log floor, not a stall.
-
-`-level_37` JUNGLE passed this sweep. It had been crashing after 5 frames in
-the morning run, and was fixed somewhere in the day's truncation work without
-being aimed at specifically.
+`-level_40` CITADEL hangs, and that is correct. Citadel is the unfinished
+multiplayer-only arena, it has no language bank, and
+`langGetLangBankIndexFromStagenum` takes the decomp's deliberate `while(1){}`
+for an unknown text bank. It does the same on hardware. It is not a solo level
+and is no longer in the sweep list. D198.
 
 Before this morning **every** level rendered zero frames: the stage mempool
 was exhausted by a truncated pointer defeating the allocation shrink, with
