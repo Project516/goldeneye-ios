@@ -132,6 +132,11 @@ jobs:
           python3 tools_pc/d88_emit.py ntsc-final --regen
           # d69_emit prints SKIP and exits 0 when the ROM is not where it
           # expects, so check the outputs rather than the exit codes.
+          #
+          # These will not be byte-identical to a locally built set: the emit
+          # scripts recompress each record, and different zlib builds emit
+          # different-length deflate streams. D199. It is this run's
+          # "ALL CHECKS PASSED" that certifies the shipped sidecars.
           test -s data/pcmodels-ntsc-final/pcmodels.bin
           test -s data/pccg-ntsc-final/pccg.bin
 
