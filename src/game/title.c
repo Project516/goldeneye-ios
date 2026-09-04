@@ -36,7 +36,14 @@ extern signed short sins(unsigned short x);
 
 // bss
 //CODE.bss:80069550
+#ifdef PORT
+/* createGunbarrelRenderHole writes through this, so it has to stay a real
+ * pointer. OS_K0_TO_PHYSICAL below then yields the true physical offset,
+ * which is what the embedded KSEG0 address needs. */
+void *barrelDisplayListPtr;
+#else
 s32 barrelDisplayListPtr;
+#endif
 //CODE.bss:80069554
 Gfx *gunbarrelgfxListPointer;
 //CODE.bss:80069558
@@ -64,9 +71,19 @@ f32 titleTransitionY;
 //CODE.bss:80069584
 s16 word_CODE_bss_80069584;
 //CODE.bss:80069588
+#ifdef PORT
+/* Both hold real buffer pointers taken from *addr, used as a romCopy target
+ * and as rle_expand_8bit operands. */
+void *dword_CODE_bss_80069588;
+#else
 s32 dword_CODE_bss_80069588;
+#endif
 //CODE.bss:8006958C
+#ifdef PORT
+void *dword_CODE_bss_8006958C;
+#else
 s32 dword_CODE_bss_8006958C;
+#endif
 //CODE.bss:80069590
 #ifdef PORT
 /* Holds a real buffer pointer (ptr_logo_and_walletbond_DL) and is used both
@@ -497,7 +514,7 @@ void initializeGunBarrelIntro(u8 *gfxBuffer, s32 bufferSize)
     bufferSize -= 0x200;
     gfxBuffer += 0x200;
     
-    createGunbarrelRenderHole(barrelDisplayListPtr, 0x1E);
+    createGunbarrelRenderHole((struct s_display_list_something *)barrelDisplayListPtr, 0x1E);
     
     gunbarrelgfxListPointer = (Gfx*)gfxBuffer;
 #ifdef PORT

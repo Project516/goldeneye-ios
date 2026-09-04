@@ -2,7 +2,11 @@
 #define _INTRO_LOGOS_H_
 #include <ultra64.h>
 
+#ifdef PORT
+extern void *barrelDisplayListPtr;
+#else
 extern s32 barrelDisplayListPtr;
+#endif
 extern Gfx *gunbarrelgfxListPointer;
 extern Mtx *matrixBufferRareLogo0;
 extern Mtx *matrixBufferGunbarrel0;
@@ -16,8 +20,16 @@ extern f32 y;
 extern f32 titleTransitionX;
 extern f32 titleTransitionY;
 extern s16 word_CODE_bss_80069584;
+#ifdef PORT
+extern void *dword_CODE_bss_80069588;
+#else
 extern s32 dword_CODE_bss_80069588;
+#endif
+#ifdef PORT
+extern void *dword_CODE_bss_8006958C;
+#else
 extern s32 dword_CODE_bss_8006958C;
+#endif
 #ifdef PORT
 extern void *virtualaddress;
 #else
