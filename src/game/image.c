@@ -2366,7 +2366,13 @@ void texLoadFromDisplayList(Gfx *gdl, struct texpool *arg1)
         if (bytes[0] == G_SETTIMG && bytes[4] == 0xab && bytes[5] == 0xcd)
 #endif
         {
+#ifdef PORT
+            /* bytes is a real pointer into the display list; (s32) drops its
+             * high half. Plain pointer arithmetic is identical on N64. */
+            texLoad((u32 *)(bytes + 4), arg1);
+#else
             texLoad((u32 *)((s32)bytes + 4), arg1);
+#endif
         }
 
         bytes += 8;
