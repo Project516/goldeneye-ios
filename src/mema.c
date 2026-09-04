@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #include "mema.h"
 #include "deb.h"
@@ -314,7 +317,13 @@ void *memaAlloc(u32 amount) {
         best->addr = 0;
     }
 
+#ifdef PORT
+    /* The pool works in window offsets: memaReset truncates the heap base
+     * into a u32 addr field. Hand callers a real pointer. */
+    return N64_TO_HOST(addr);
+#else
     return (void*)addr;
+#endif
 }
 
 // Find the memaspace of the given address and reduce its size by the given
@@ -377,7 +386,11 @@ found:
 
 void memaFree(void *addr, s32 size)
 {
+#ifdef PORT
+	_memaFree((u32)(uintptr_t) addr, size);
+#else
 	_memaFree((uintptr_t) addr, size);
+#endif
 }
 
 

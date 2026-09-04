@@ -900,7 +900,7 @@ void load_bg_file(LEVEL_INDEX levelid)
     {
         dword_CODE_bss_8007FF88 = 2;
         ptr_bgdata_offsets = (s32)data;
-        ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[1]);
+        ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)N64_TO_HOST(ptr_bgdata_offsets))[1]);
         
         // Keep this fake goto for matching.
         goto dummy_label_543534; dummy_label_543534: ;
@@ -912,25 +912,25 @@ void load_bg_file(LEVEL_INDEX levelid)
             g_MaxNumRooms++;  
         }
  
-        g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[2]);
+        g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)N64_TO_HOST(ptr_bgdata_offsets))[2]);
 
         if (1);
 
-        if (((s32 *)ptr_bgdata_offsets)[3] == 0)
+        if (((s32 *)N64_TO_HOST(ptr_bgdata_offsets))[3] == 0)
         {
             dword_CODE_bss_8007FF90 = 0;
         }
         else
         {
-            dword_CODE_bss_8007FF90 = (s32 *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[3]);
+            dword_CODE_bss_8007FF90 = (s32 *) BG_SEG_TO_PTR(data, ((s32 *)N64_TO_HOST(ptr_bgdata_offsets))[3]);
  
-            if (((s32 *)ptr_bgdata_offsets)[4] == 0)
+            if (((s32 *)N64_TO_HOST(ptr_bgdata_offsets))[4] == 0)
             {
                 dword_CODE_bss_8007FF94 = NULL;
             }
             else
             {
-                dword_CODE_bss_8007FF94 = (f32 *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[4]);
+                dword_CODE_bss_8007FF94 = (f32 *) BG_SEG_TO_PTR(data, ((s32 *)N64_TO_HOST(ptr_bgdata_offsets))[4]);
             }
         }
  
@@ -5172,7 +5172,16 @@ void bgRoomCalcBB(s32 room) // canonical name
     StanRoomBounds limits;
     u8 wasloaded;
 
+#ifdef PORT
+    /* The list is a real pointer; (s32) drops its high half. */
+    roomdata = (bg_room_data *) ((u8 *) ptr_bgdata_room_fileposition_list + room * 24);
+#else
+#ifdef PORT
+    roomdata = (bg_room_data *) ((u8 *) ptr_bgdata_room_fileposition_list + room * 24);
+#else
     roomdata = (bg_room_data *) ((s32) ptr_bgdata_room_fileposition_list + room * 24);
+#endif
+#endif
 
     if (roomdata->pPointTableBin == NULL)
     {
@@ -5205,7 +5214,11 @@ void bgRoomCalcBB(s32 room) // canonical name
     }
 
     vertices = g_BgRoomInfo[room].vertices;
+#ifdef PORT
+    roomdata = (bg_room_data *) ((u8 *) ptr_bgdata_room_fileposition_list + room * 24);
+#else
     roomdata = (bg_room_data *) ((s32) ptr_bgdata_room_fileposition_list + room * 24);
+#endif
 
     limits.minX = 0x7fff;
     limits.minY = 0x7fff;
