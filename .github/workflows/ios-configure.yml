@@ -37,7 +37,16 @@ jobs:
         run: |
           cmake --version | head -1
           xcodebuild -version
-          xcrun --sdk iphoneos --show-sdk-path
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "sdk=$SDK"
+          echo "--- clang++ ---"
+          xcrun --sdk iphoneos --find clang++
+          # Two guesses at where libc++ lives have now been wrong, so ask the
+          # compiler instead of guessing a third time.
+          echo "--- C++ include search list for the iOS target ---"
+          echo | "$(xcrun --sdk iphoneos --find clang++)" -x c++ -E -v \
+            -target arm64-apple-ios15.0 -isysroot "$SDK" - 2>&1 \
+            | sed -n '/#include <...> search starts here/,/End of search list/p'
 
       # The ROM sizes the images segment (everything after obseg to the end of
       # the ROM). Without it gen_romassets.py falls back to the CSV maximum,
