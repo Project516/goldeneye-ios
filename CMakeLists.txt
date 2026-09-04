@@ -799,9 +799,34 @@ foreach(_d IN LISTS PORT_CXX_INCLUDE_DIRS)
 endforeach()
 
 set(BIN_NAME "ge007${BIN_REGION}.${TARGET_ARCH}")
-add_executable(ge007 ${SRC})
+if(TARGET_IOS)
+  # An IPA is a zip with a .app under Payload/, so the target has to be a
+  # bundle. SideStore re-signs on device, which is why the build stays
+  # unsigned. Configure with -DPORT_IOS_BUNDLE_ID=... to change the id.
+  set(PORT_IOS_BUNDLE_ID "dev.project516.goldeneye" CACHE STRING
+      "iOS bundle identifier")
+  configure_file(
+    "${CMAKE_SOURCE_DIR}/port/ios/Info.plist.in"
+    "${CMAKE_BINARY_DIR}/port/ios/Info.plist" @ONLY)
+  add_executable(ge007 MACOSX_BUNDLE ${SRC})
+  set_target_properties(ge007 PROPERTIES
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_BINARY_DIR}/port/ios/Info.plist"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${PORT_IOS_BUNDLE_ID}"
+    XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+    XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+    XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2")
+  message(STATUS "iOS bundle: GoldenEye.app (${PORT_IOS_BUNDLE_ID})")
+else()
+  add_executable(ge007 ${SRC})
+endif()
 target_link_libraries(ge007 port_cxx ${LIBS})
-set_target_properties(ge007 PROPERTIES OUTPUT_NAME "${BIN_NAME}")
+if(TARGET_IOS)
+  # The bundle name is what shows on the home screen; keep the ROM-id suffix
+  # out of it.
+  set_target_properties(ge007 PROPERTIES OUTPUT_NAME "GoldenEye")
+else()
+  set_target_properties(ge007 PROPERTIES OUTPUT_NAME "${BIN_NAME}")
+endif()
 if(WIN32)
   set_target_properties(ge007 PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
