@@ -130,8 +130,20 @@ extern coord3d ZeroCoordSpawnPos;
 extern s32 status_bar_text_buffer_index;
 extern s32 display_statusbar;
 #ifdef BUGFIX_R0
+/* D197: assigned from real font pointers (bondview2.c) and used as pointers
+ * (the BONDVIEW_*_FONTTABLE macros feed textMeasure/textRender). s32 truncates
+ * them on PC. These are plain BSS globals, not ROM-serialized, so nothing
+ * depends on their width and widening is safe. */
+#ifdef PORT
+extern void *copy_1stfonttable;
+#else
 extern s32 copy_1stfonttable;
+#endif
+#ifdef PORT
+extern void *copy_2ndfonttable;
+#else
 extern s32 copy_2ndfonttable;
+#endif
 #endif
 extern s32 upper_text_buffer_index;
 extern s32 display_upper_text_window;

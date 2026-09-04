@@ -1723,7 +1723,14 @@ Gfx *explosionRenderFlyingParticles(Gfx *gdl)
     for (i = 0; i < max_particles; i++)
     {
         // HACK: regalloc has instructions backwards.
+#ifdef PORT
+        /* D197: the (u32) is a byte-matching aid. g_FlyingParticlesBuffer is
+         * already a struct FlyingParticles *, so on PC the cast just discards
+         * the top half of a real pointer. */
+        particles = g_FlyingParticlesBuffer + i;
+#else
         particles = (struct FlyingParticles *)(u32)g_FlyingParticlesBuffer + i;
+#endif
 
         if (particles->unk00 > 0)
         {

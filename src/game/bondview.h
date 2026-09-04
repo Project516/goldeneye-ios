@@ -2689,9 +2689,21 @@ extern s32 status_bar_text_buffer_index;
 //D:8003689C
 extern s32 display_statusbar;
 //D:800368A0
+/* D197: assigned from real font pointers (bondview2.c) and used as pointers
+ * (the BONDVIEW_*_FONTTABLE macros feed textMeasure/textRender). s32 truncates
+ * them on PC. These are plain BSS globals, not ROM-serialized, so nothing
+ * depends on their width and widening is safe. */
+#ifdef PORT
+extern void *copy_1stfonttable;
+#else
 extern s32 copy_1stfonttable;
+#endif
 //D:800368A4
+#ifdef PORT
+extern void *copy_2ndfonttable;
+#else
 extern s32 copy_2ndfonttable;
+#endif
 //D:800368A8
 extern s32 upper_text_buffer_index;
 //D:800368AC
@@ -2808,7 +2820,15 @@ void jp_hudmsgBottomShow(char *string);
 // VERSION_US
 #define HUDMESSAGEBOTTOM hudmsgBottomShow
 void hudmsgBottomShow(char *string);
+#ifdef PORT
+/* D197: both arguments are font pointers (bondview2.c passes
+ * ptrFontZurichBoldChars / ptrFontZurichBold), stored straight into
+ * copy_2ndfonttable / copy_1stfonttable. Declaring them s32 truncates the
+ * pointers at the call. */
+void setFontTables(void *arg0, void *arg1);
+#else
 void setFontTables(s32 arg0, s32 arg1);
+#endif
 #endif
 
 Gfx * bondviewRenderDebugBondView(Gfx *arg0);

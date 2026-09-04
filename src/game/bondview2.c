@@ -9806,7 +9806,11 @@ void hudmsgsSetOff(s32 flags)
 
 
 #ifdef VERSION_US
+#ifdef PORT
+void setFontTables(void *arg0, void *arg1)
+#else
 void setFontTables(s32 arg0, s32 arg1)
+#endif
 {
     copy_2ndfonttable = arg0;
     copy_1stfonttable = arg1;
@@ -10010,7 +10014,14 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
             }
 
             view_vert = view_top - view_top_offset;
+#ifdef PORT
+            /* D197: these are addresses of stack locals, and the parameters
+             * are s32 *. The (s32) casts are a no-op on the N64 and drop the
+             * top half of a window stack address here. */
+            arg0 = draw_blackbox_to_screen(arg0, &view_left, &view_vert, &view_horiz, &view_top);
+#else
             arg0 = draw_blackbox_to_screen(arg0, (s32) &view_left, (s32) &view_vert, (s32) &view_horiz, (s32) &view_top);
+#endif
             arg0 = combiner_bayer_lod_perspective(textRenderOutlined(arg0, &view_left, &view_vert, stringbuffer_lowerleft[status_bar_text_buffer_index], BONDVIEW_2ND_FONTTABLE(status_bar_text_buffer_index), BONDVIEW_1ST_FONTTABLE(status_bar_text_buffer_index), -1, 0x646464FFU, (s16) (s32) viGetX(), (s16) viGetY(), 0, 0));
         }
     }
