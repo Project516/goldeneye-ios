@@ -269,6 +269,18 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-function>)
 # automatic base-pointer conversion the idiom relies on). C only — the decomp
 # is C; fast3d C++ does not use `inherits`.
 if(NOT MINGW)
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    # Clang has no -fplan9-extensions. -fms-extensions gives the unnamed
+    # tagged member and field promotion, but not Plan 9's automatic
+    # base-pointer conversion, so passing an ObjectRecord* where a
+    # PropRecord* is wanted becomes an error. The embedded base is always the
+    # first member, so the pointer value is already correct and only the type
+    # check objects; downgrade it. Verified to produce byte-identical
+    # behaviour to GCC's -fplan9-extensions.
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-fms-extensions>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-incompatible-pointer-types>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-microsoft-anon-tag>)
+  else()
   add_compile_options($<$<COMPILE_LANGUAGE:C>:-fplan9-extensions>)
   # GCC 14 promoted several long-standing C leniencies to hard errors
   # (int<->pointer for a known prototype, incompatible-pointer arg types,
@@ -277,6 +289,7 @@ if(NOT MINGW)
   # downgrades them to warnings — the C counterpart of the -Wno-error lines
   # above, and the documented path for building older C against GCC 14+.
   add_compile_options($<$<COMPILE_LANGUAGE:C>:-fpermissive>)
+  endif()
 endif()
 
 # ASLR must be OFF: dram_syms.s defines absolute symbols (cfb_16 @ 0x70000000,

@@ -205,15 +205,18 @@ s32 g_DebugPortalsInputBuffer2 = 0;
 s32 g_DebugPortalsInputBuffer3 = 0;
 s32 g_DebugPortalsInputBuffer4 = 0;
 
-extern s32 g_DebugPortalsInputBufferSource1;
-extern s32 g_DebugPortalsInputBufferSource2;
-extern s32 g_DebugPortalsInputBufferSource3;
-extern s32 g_DebugPortalsInputBufferSource4;
-
-#pragma weak g_DebugPortalsInputBufferSource1 = g_DebugPortalsInputBuffer1
-#pragma weak g_DebugPortalsInputBufferSource2 = g_DebugPortalsInputBuffer2
-#pragma weak g_DebugPortalsInputBufferSource3 = g_DebugPortalsInputBuffer3
-#pragma weak g_DebugPortalsInputBufferSource4 = g_DebugPortalsInputBuffer4
+/* Weak aliases onto the four buffers above. Clang resolves `#pragma weak X = Y`
+ * alongside a matching extern declaration as two candidates for one name and
+ * rejects every use as ambiguous, so spell the alias as an attribute instead:
+ * GCC and Clang both accept it and emit the same weak alias. */
+extern s32 g_DebugPortalsInputBufferSource1
+    __attribute__((weak, alias("g_DebugPortalsInputBuffer1")));
+extern s32 g_DebugPortalsInputBufferSource2
+    __attribute__((weak, alias("g_DebugPortalsInputBuffer2")));
+extern s32 g_DebugPortalsInputBufferSource3
+    __attribute__((weak, alias("g_DebugPortalsInputBuffer3")));
+extern s32 g_DebugPortalsInputBufferSource4
+    __attribute__((weak, alias("g_DebugPortalsInputBuffer4")));
 
 /**
  * Something debug related in the MP manage method.

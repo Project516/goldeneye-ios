@@ -46,14 +46,19 @@ s32 sub_GAME_7F0D37DC(u32 cycles, u8 specA, u8 port, u8 value);
 
 // data
 s8 D_8004EC30 = 0x0;
-extern u8 spec_keyboard_row_caps_z_x_c_v;
-#pragma weak spec_keyboard_row_caps_z_x_c_v = spec_keyboard_buffer
 u8 spec_keyboard_buffer[] = 
 {
     0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF,
     0xFF
 };
+
+/* Names the first row of the keyboard buffer. Spelled as an attribute rather
+ * than `#pragma weak` + extern, which Clang treats as two candidates for one
+ * name and rejects at every use; the attribute has to follow the definition
+ * it aliases. */
+extern u8 spec_keyboard_row_caps_z_x_c_v
+    __attribute__((weak, alias("spec_keyboard_buffer")));
 
 u8 spec_kempston_joystick_state = 0;
 
