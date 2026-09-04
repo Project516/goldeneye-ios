@@ -108,7 +108,15 @@ s32 initResolveAnimGroupTable(struct weapon_firing_animation_table *animconfig)
 
         do
         {
+#ifdef PORT
+            /* (s32)ptr_animation_table keeps only the low half of a real
+             * pointer now that the table is in the window. Add the offset to
+             * the pointer itself. */
+            config->anim.anim =
+                (struct ModelAnimation *)((u8 *)ptr_animation_table + (uintptr_t)(u32)animoffset);
+#else
             config->anim.anim = (struct ModelAnimation *)(((0, animoffset)) + ((s32)ptr_animation_table));
+#endif
             endframe = floorFloatToInt(config->unk04);
             angle16 = sub_GAME_7F0001F0(config->anim.anim, 0, endframe) & 0xffff;
             duration = config->unk04;
@@ -186,7 +194,17 @@ s32 initResolveAnimTable(struct StruckAnim *entries)
             count++;
             entry++;
             ptr_animation_table_addr = (struct StruckAnim *)(&ptr_animation_table);
+#ifdef PORT
+            /* The original reads ptr_animation_table through an s32*, which
+             * takes only the low half of a real pointer now that the table
+             * lives in the window. The base is already a pointer, so add the
+             * offset to it directly. */
+            entry[-1].struck_anim =
+                (ModelAnimation *)((u8 *)ptr_animation_table + (uintptr_t)(u32)address);
+            (void)entries;
+#else
             entry[-1].struck_anim = (ModelAnimation *)((*((s32 *)entries)) + (0, address));
+#endif
         }
         while (entry->struck_anim != 0);
     }

@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 #ifdef PORT /* TEMP D51 */
 #include <stdio.h>
@@ -1025,7 +1028,14 @@ u16 modelAnimReadRootMotionValue(ModelAnimation *anim, s32 fieldIndex, s32 extra
     u8 bitsThisRead;
 
     result = 0;
+#ifdef PORT
+    /* bitDescriptors and bitStream are u32 fields holding N64 addresses (D32).
+     * The window base is 4 GiB-aligned, so the stored value is the offset and
+     * only the dereference needs the base added back. */
+    desc = (ModelAnimBitField *)N64_TO_HOST(anim->bitDescriptors) + fieldIndex;
+#else
     desc = (ModelAnimBitField *)anim->bitDescriptors + fieldIndex; // D32: u32 -> ptr
+#endif
     bitsRemaining = desc->bitCount;
 
     if (bitsRemaining > 0)
@@ -1033,7 +1043,11 @@ u16 modelAnimReadRootMotionValue(ModelAnimation *anim, s32 fieldIndex, s32 extra
         totalBitOffset = extraBitOffset + desc->bitOffset;
         byteIndex = totalBitOffset >> 3;
         totalBitOffset &= 7;
+#ifdef PORT
+        byteptr = (u8 *)N64_TO_HOST(anim->bitStream) + byteIndex;
+#else
         byteptr = (u8 *)anim->bitStream + byteIndex; // D32: u32 -> ptr
+#endif
         bitsThisRead = 8 - totalBitOffset;
 
         if (bitsRemaining >= bitsThisRead)

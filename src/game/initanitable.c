@@ -1,6 +1,9 @@
 #include <ultra64.h>
 #include <memp.h>
 #include "initanitable.h"
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include "objecthandler.h"
 #include "bondgame.h"
 
@@ -252,6 +255,12 @@ struct anim_entry
     s32 unk10;
 };
 
+#ifdef PORT
+#define ANIM_HOSTPTR(v) N64_TO_HOST(v)
+#else
+#define ANIM_HOSTPTR(v) ((void *)(v))
+#endif
+
 void expand_ani_table_entries(s32** arg0)
 {
     /* D33: iterate as s32 * (4 bytes/iter). As s32 ** the loop advanced 8
@@ -262,16 +271,20 @@ void expand_ani_table_entries(s32** arg0)
     var_v0 = (s32 *)arg0;
     while (*var_v0 != 0) {
         if (*var_v0 != 1) {
-            *var_v0 = (s32)((s32)*var_v0 + (s32)(&ptr_animation_table->data));
-            ((struct anim_entry *)*var_v0)->unk08 += (s32)&ptr_animation_table->data;
-            ((struct anim_entry *)*var_v0)->unk10 += (s32)&ptr_animation_table->data;
+            /* The table holds 32-bit N64 addresses and the arithmetic stays
+             * 32-bit, which is fine: the window base is 4 GiB-aligned, so
+             * truncating a host pointer yields exactly this offset. Only the
+             * dereference needs the base put back. */
+            *var_v0 = (s32)((s32)*var_v0 + (s32)(uintptr_t)(&ptr_animation_table->data));
+            ((struct anim_entry *)ANIM_HOSTPTR(*var_v0))->unk08 += (s32)(uintptr_t)&ptr_animation_table->data;
+            ((struct anim_entry *)ANIM_HOSTPTR(*var_v0))->unk10 += (s32)(uintptr_t)&ptr_animation_table->data;
         }
         var_v0++;
     }
 
     for (var_v0 = (s32 *)arg0; *var_v0 != 0; var_v0++) {
         if (*var_v0 != 1) {
-            *(s32 *)*var_v0 += (s32)&_animation_entriesSegmentRomStart;
+            *(s32 *)ANIM_HOSTPTR(*var_v0) += (s32)(uintptr_t)&_animation_entriesSegmentRomStart;
         }
     }
 }
