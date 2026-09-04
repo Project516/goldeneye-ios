@@ -104,6 +104,33 @@ other running agent; a budget in cycles or minutes; what to do on expiry;
 what is already ruled out; and the shape of the report. Tell it to read
 `docs/porting-notes.md` first and to append anything generalisable to it.
 
+## CI and delivery
+
+This repo is public so macOS runner minutes are free. That also means its
+Actions artifacts are downloadable by anyone, so **nothing playable is ever
+published here**. `linux-build.yml` is a compile check that publishes nothing;
+`ios-configure.yml` records the current iOS error profile in the run summary.
+
+`ios-ipa.yml` (manual only) builds an unsigned IPA and drops it as a release
+in the private `Project516/goldeneye-ios-builds` repo. SideStore re-signs on
+device, so the IPA stays unsigned and nothing needs decrypting.
+
+Secrets:
+
+| Secret | Used by | What it is |
+|---|---|---|
+| `ROM_URL` | `ios-configure`, `ios-ipa` | Private URL of the NTSC-U ROM. Fetched to `baserom.u.z64`, checked against SHA-1 `abe01e4aeb033b6c0836819f549c791b26cfde83`, deleted before the job ends. Never echoed. |
+| `IPA_DROP_TOKEN` | `ios-ipa` | Fine-grained PAT with `contents: write` on `goldeneye-ios-builds` and nothing else. |
+
+Because the repo is public, a workflow must never run with these secrets on a
+`pull_request` from a fork, and must never use `pull_request_target`. GitHub
+withholds secrets from fork PRs on `pull_request`, so keep it that way.
+
+`ios-ipa.yml` cannot succeed yet: CMake builds a plain arm64 executable, not a
+`MACOSX_BUNDLE` target with an `Info.plist`, and fast3d still targets desktop
+GL 3.3. It fails at the bundle-locate step until the app shell and a GLES3 or
+Metal backend land.
+
 ## Upstream
 
 This is a hard fork. It does not track or merge

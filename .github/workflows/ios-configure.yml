@@ -39,10 +39,28 @@ jobs:
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-path
 
-      # gen_romassets.py needs no ROM: it reads the committed CSV layout.
+      # The ROM sizes the images segment (everything after obseg to the end of
+      # the ROM). Without it gen_romassets.py falls back to the CSV maximum,
+      # which is short, so the generated symbols are wrong at runtime even
+      # though they compile. Never echo the URL and never keep the ROM.
+      - name: Fetch the ROM
+        env:
+          ROM_URL: ${{ secrets.ROM_URL }}
+        run: |
+          if [ -z "$ROM_URL" ]; then
+            echo "ROM_URL is not set; the images segment will be sized from the CSV" >&2
+            exit 0
+          fi
+          curl -sSfL "$ROM_URL" -o baserom.u.z64
+          echo "abe01e4aeb033b6c0836819f549c791b26cfde83  baserom.u.z64" | shasum -c -
+
       # Mach-O needs different section syntax and underscore-prefixed symbols.
       - name: Regenerate ROM-asset symbol file (US, Mach-O)
         run: python3 scripts/gen_romassets.py u --macho
+
+      - name: Drop the ROM
+        if: always()
+        run: rm -f baserom.u.z64
 
       - name: Configure for iOS
         continue-on-error: true

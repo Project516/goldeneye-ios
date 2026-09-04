@@ -1,0 +1,102 @@
+name: ios-ipa
+
+# Builds an unsigned IPA and drops it as a release in the PRIVATE
+# Project516/goldeneye-ios-builds repo. This repo is public so macOS runner
+# minutes are free, but a public repo's artifacts are downloadable by anyone,
+# so nothing playable is published here.
+#
+# Manual only, on purpose: it costs a macOS runner and it needs two secrets.
+#
+# NOT USABLE YET. The iOS app shell does not exist: CMake builds a plain
+# arm64 executable, not a MACOSX_BUNDLE target with an Info.plist, and fast3d
+# still targets desktop GL 3.3 rather than GLES3 or Metal. The steps below are
+# correct in shape and will start producing a real IPA once those two land.
+# Until then this fails at "Locate the app bundle", which is the honest
+# outcome rather than a green run that shipped nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag in the drop repo (default: ios-<run number>)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check the secrets are present
+        env:
+          ROM_URL: ${{ secrets.ROM_URL }}
+          DROP_TOKEN: ${{ secrets.IPA_DROP_TOKEN }}
+        run: |
+          [ -n "$ROM_URL" ] || { echo "ROM_URL secret is missing" >&2; exit 1; }
+          [ -n "$DROP_TOKEN" ] || { echo "IPA_DROP_TOKEN secret is missing" >&2; exit 1; }
+
+      # Never echoed, never uploaded, deleted at the end of the job.
+      - name: Fetch the ROM
+        env:
+          ROM_URL: ${{ secrets.ROM_URL }}
+        run: |
+          curl -sSfL "$ROM_URL" -o baserom.u.z64
+          echo "abe01e4aeb033b6c0836819f549c791b26cfde83  baserom.u.z64" | shasum -c -
+
+      - name: Extract assets
+        run: ./scripts/extract_baserom.u.sh
+
+      - name: Regenerate ROM-asset symbol file (US, Mach-O)
+        run: python3 scripts/gen_romassets.py u --macho
+
+      - name: Build
+        run: |
+          cmake -S . -B build-ios -G Xcode \
+            -DROMID=ntsc-final \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
+          cmake --build build-ios --config Release -- CODE_SIGNING_ALLOWED=NO
+
+      # SideStore re-signs on device, so the IPA stays unsigned. An IPA is just
+      # a zip with the .app under Payload/.
+      - name: Locate the app bundle
+        id: bundle
+        run: |
+          APP=$(find build-ios -maxdepth 4 -name '*.app' -type d | head -1)
+          [ -n "$APP" ] || {
+            echo "No .app bundle. The CMake target is still a plain" >&2
+            echo "executable; the iOS app shell has not landed yet." >&2
+            exit 1
+          }
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Package the IPA
+        run: |
+          mkdir -p Payload
+          cp -R "${{ steps.bundle.outputs.app }}" Payload/
+          zip -qry goldeneye-ios.ipa Payload
+          ls -la goldeneye-ios.ipa
+
+      - name: Drop the ROM and the converted assets
+        run: rm -rf baserom.u.z64 assets data Payload
+
+      - name: Publish to the private drop repo
+        env:
+          GH_TOKEN: ${{ secrets.IPA_DROP_TOKEN }}
+          TAG: ${{ inputs.tag || format('ios-{0}', github.run_number) }}
+        run: |
+          gh release create "$TAG" goldeneye-ios.ipa \
+            --repo Project516/goldeneye-ios-builds \
+            --title "goldeneye-ios $TAG" \
+            --notes "Unsigned IPA from goldeneye-ios ${{ github.sha }}. Open in SideStore, then put your own GoldenEye.z64 in the app's Documents folder."
