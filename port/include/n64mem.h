@@ -44,6 +44,12 @@ void *n64memAlias(uint64_t srcOff, uint64_t dstOff, size_t len);
 /* True if [p, p+len) lies inside the window. The DMA gate uses this. */
 int n64memContains(uintptr_t p, size_t len);
 
+/* Read through an absolute cart symbol from romassets_<region>.s. Those
+ * symbols hold N64 cart addresses, not host pointers, so taking one and
+ * dereferencing it needs the window base put back first. Symbols used only as
+ * a DMA source do not need this: piServiceDma converts them already. */
+#define CART_HOSTPTR(type, sym) ((type)N64_TO_HOST((uintptr_t)&(sym)))
+
 /* An N64 address as a host pointer, and back. */
 #define N64_TO_HOST(v)   ((void *)(g_n64Base + (uintptr_t)(uint32_t)(v)))
 #define N64_FROM_HOST(p) ((uint32_t)(uintptr_t)(p))

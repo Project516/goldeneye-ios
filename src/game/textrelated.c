@@ -95,6 +95,11 @@ void setTextOverlapCorrection(s32 flag) {
 }
 
 extern u8 _fontbankgothicSegmentEnd;
+#ifdef PORT
+#include "n64mem.h"
+#else
+#define CART_HOSTPTR(type, sym) ((type)&(sym))
+#endif
 extern u8 _fontbankgothicSegmentRomStart;
 extern u8 _fontzurichboldSegmentEnd;
 extern u8 _fontzurichboldSegmentRomStart;
@@ -120,7 +125,7 @@ void load_font_tables(void)
 #ifdef PORT
 	{
         u32 n64len = len;
-		ptrFontBankGothic = (struct font *)mempAllocBytesInBank(romdataFontPcSize((const u8 *)&_fontbankgothicSegmentRomStart, n64len), MEMPOOL_STAGE);
+		ptrFontBankGothic = (struct font *)mempAllocBytesInBank(romdataFontPcSize(CART_HOSTPTR(const u8 *, _fontbankgothicSegmentRomStart), n64len), MEMPOOL_STAGE);
 		ptrFontBankGothicChars = ptrFontBankGothic->chars;
 
 		romCopy(ptrFontBankGothic, (void *) &_fontbankgothicSegmentRomStart, n64len);
@@ -143,7 +148,7 @@ void load_font_tables(void)
 #ifdef PORT
 	{
         u32 n64len = len;
-		ptrFontZurichBold = (struct font *)mempAllocBytesInBank(romdataFontPcSize((const u8 *)&_fontzurichboldSegmentRomStart, n64len), MEMPOOL_STAGE);
+		ptrFontZurichBold = (struct font *)mempAllocBytesInBank(romdataFontPcSize(CART_HOSTPTR(const u8 *, _fontzurichboldSegmentRomStart), n64len), MEMPOOL_STAGE);
 		ptrFontZurichBoldChars = ptrFontZurichBold->chars;
 
 		romCopy(ptrFontZurichBold, (void *) &_fontzurichboldSegmentRomStart, n64len);

@@ -614,10 +614,7 @@ s16 *g_sndSfxSlotVolume;
 u16 *g_sndSfxSlotNaturalVolume;
 
 #ifdef PORT
-/* These are absolute cart addresses from romassets_<region>.s, not host
- * pointers. Reading through one means putting the window base back first. */
 #include "n64mem.h"
-#define CART_HOSTPTR(type, sym) ((type)N64_TO_HOST((uintptr_t)&(sym)))
 #else
 #define CART_HOSTPTR(type, sym) ((type)&(sym))
 #endif
