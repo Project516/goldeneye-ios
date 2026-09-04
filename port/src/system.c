@@ -84,6 +84,25 @@ void sysSleep(uint32_t micros)
 
 /* --- Logging ------------------------------------------------------------ */
 
+#if defined(PLATFORM_IOS)
+/*
+ * iOS gives the user no console, so everything written to stderr is also
+ * appended to Documents/ge007.log, which they can pull out through the Files
+ * app. Truncated once per launch and flushed per line, because the line worth
+ * reading is usually the last one before an abort.
+ */
+static FILE *iosLogFile(void)
+{
+    static FILE *f = NULL;
+    static int opened = 0;
+    if (!opened) {
+        opened = 1;
+        f = fopen(sysResolvePath("$S/ge007.log"), "wb");
+    }
+    return f;
+}
+#endif
+
 void sysLogPrintf(enum LogLevel level, const char *fmt, ...)
 {
     static const char *tags[] = { "ERROR", "WARN ", "NOTE ", "INFO ", "DEBUG" };
@@ -94,6 +113,20 @@ void sysLogPrintf(enum LogLevel level, const char *fmt, ...)
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fprintf(stderr, "\n");
+#if defined(PLATFORM_IOS)
+    {
+        FILE *lf = iosLogFile();
+        if (lf) {
+            va_list ap2;
+            fprintf(lf, "[%s] ", tags[level]);
+            va_start(ap2, fmt);
+            vfprintf(lf, fmt, ap2);
+            va_end(ap2);
+            fprintf(lf, "\n");
+            fflush(lf);
+        }
+    }
+#endif
 }
 
 void sysFatalError(const char *fmt, ...)
@@ -107,6 +140,20 @@ void sysFatalError(const char *fmt, ...)
     va_end(ap);
     fprintf(stderr, "\n");
     fflush(stderr);
+#if defined(PLATFORM_IOS)
+    {
+        FILE *lf = iosLogFile();
+        if (lf) {
+            va_list ap2;
+            fprintf(lf, "[FATAL] ");
+            va_start(ap2, fmt);
+            vfprintf(lf, fmt, ap2);
+            va_end(ap2);
+            fprintf(lf, "\n");
+            fflush(lf);
+        }
+    }
+#endif
     abort();
 }
 

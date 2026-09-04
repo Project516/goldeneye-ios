@@ -153,6 +153,9 @@ jobs:
 
           The renderer still targets desktop GL, so expect this to fail at
           renderer init rather than to play.
+
+          When it does, \`ge007.log\` appears in that same folder. That is the
+          whole log, not just the crash, and it is what to send back.
           EOF
           gh release create "$TAG" \
             goldeneye-ios.ipa goldeneye-ios-assets.tar.gz \
