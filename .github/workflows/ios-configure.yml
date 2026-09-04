@@ -25,7 +25,7 @@ concurrency:
 jobs:
   configure:
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,10 +51,24 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
             2>&1 | tee configure.log
 
+      - name: Build for iOS
+        if: success()
+        continue-on-error: true
+        run: |
+          cmake --build build-ios --config Release -- \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log || true
+
       - name: Report the first blocker
         run: |
           echo "### iOS configure" >> "$GITHUB_STEP_SUMMARY"
-          if grep -q "Configuring done" configure.log; then
+          if [ -f build.log ]; then
+            echo "Configure succeeded. Build errors, most common first:" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            grep -oE "error: .*" build.log | sed "s/'[^']*'/X/g" \
+              | sort | uniq -c | sort -rn | head -15 >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "Total errors: $(grep -c 'error:' build.log)" >> "$GITHUB_STEP_SUMMARY"
+          elif grep -q "Configuring done" configure.log; then
             echo "Configure succeeded." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "First error:" >> "$GITHUB_STEP_SUMMARY"
