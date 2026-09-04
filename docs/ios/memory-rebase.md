@@ -317,11 +317,20 @@ calls, against GLES 3.0:
   `precision mediump float;` line in both stages, `in`/`out` versus
   `attribute`/`varying`, and `texture()` versus `texture2D()`.
 
-So the remaining unknowns are narrow: whether `glad`, a desktop GL loader,
-behaves against an ES context, and whether the GLSL that comes out actually
-compiles on a real driver. `gfx_sdl2.cpp` now asks for ES 3.0 and only ES 3.0
-on iOS, with no fallback, so a context problem says so instead of handing back
-an ES 2 context the GLSL 130 path cannot use.
+`glad` is less of a problem than it looks too. It is a combined desktop-plus-ES
+generation, `find_coreGL()` already strips the `"OpenGL ES "` prefix before
+parsing `GL_VERSION` so the version comes out as 3.0 rather than 0.0, and
+`gladLoadGLES2Loader` is compiled in and available if the desktop loader turns
+out not to be enough. Desktop-only entry points resolve to NULL through
+`SDL_GL_GetProcAddress`, which is exactly what the `!= NULL` guards above
+expect. Downstream, `gfx_opengl_init` sets `gl_glsl_version` to `300` and the
+version string to `"300 es"` when `gl_es`, and switches to a VAO because core
+and ES require one.
+
+So the one real unknown left is whether the GLSL that comes out compiles on a
+real driver. `gfx_sdl2.cpp` now asks for ES 3.0 and only ES 3.0 on iOS, with
+no fallback, so a context problem says so instead of handing back an ES 2
+context the GLSL 130 path cannot use.
 
 Do not guess further. The app builds and installs now, so get a launch and
 read what it actually says.
