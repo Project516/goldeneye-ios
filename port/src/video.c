@@ -343,7 +343,8 @@ void videoPumpEvents(void)
     while (SDL_PollEvent(&ev)) {
         switch (ev.type) {
         case SDL_QUIT:
-            sysLogPrintf(LOG_INFO, "video: quit requested");
+            sysLogPrintf(LOG_INFO, "video: quit requested after %d frames rendered",
+                         portFramesRendered());
             exit(0);
             break;
         case SDL_KEYDOWN:

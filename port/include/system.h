@@ -23,6 +23,12 @@ uint64_t sysGetMicroseconds(void);
  * into file offsets for addr2line; ASLR moves the image on Windows).
  */
 uintptr_t sysImageBase(void);
+
+/* How many display lists the software RSP has actually run. The VI retrace
+ * tick is timer-driven and keeps counting whether or not the game submits
+ * anything, so this is the only honest "did it render" signal for a headless
+ * or scripted run. Defined in libultra.c. */
+int portFramesRendered(void);
 /* Wall-clock seconds since the epoch (for timestamps). */
 int64_t  sysGetTime(void);
 /* Sleep for the given number of microseconds. */

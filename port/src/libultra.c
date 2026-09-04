@@ -172,6 +172,11 @@ static void portPostVIEvent(void);
 static void portServiceTimers(void);
 static uint64_t portNextTimerUs(void);
 
+/* The VI retrace tick runs off a timer and keeps counting whether or not the
+ * game ever submits a display list, so "VI posts" is not evidence that
+ * anything rendered. Judge a headless run on this instead. */
+int portFramesRendered(void) { return g_framesRendered; }
+
 static void portHeartbeatCheck(void)
 {
     /* A real hang is a permanent stall; transient >3 s gaps are normal on a
@@ -185,7 +190,7 @@ static void portHeartbeatCheck(void)
         g_lastHeartbeatUs = now;
         sysLogPrintf(LOG_ERROR,
             "kernel heartbeat: no frame rendered for %llu ms (frames=%d); state:",
-            (unsigned long long)(now - g_lastFrameUs), g_framesRendered);
+            (unsigned long long)((now - g_lastFrameUs) / 1000), g_framesRendered);
         for (int i = 0; i < PORT_MAX_THREADS; ++i) {
             PortThread *t = &g_pt[i];
             if (!t->os) continue;

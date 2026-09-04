@@ -437,13 +437,30 @@ endif()
 # include path, and it checks: <cstddef> includes <stddef.h> and errors out if
 # what it got was not libc++'s stddef.h. Our -I list below puts port/shim and
 # the decomp's include/ first, which is right for the game's C code and wrong
-# for the four C++ TUs in port/fast3d. Putting c++/v1 ahead of them fixes the
-# check; libc++'s wrapper then #include_next's onward, landing on the shims,
-# which route to the real host header. CXX only, so no C TU sees this.
-if(APPLE AND CMAKE_OSX_SYSROOT AND EXISTS "${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
-  message(STATUS "C++ standard library: ${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
-  add_compile_options(
-    $<$<COMPILE_LANGUAGE:CXX>:-I${CMAKE_OSX_SYSROOT}/usr/include/c++/v1>)
+# for the C++ TUs in port/fast3d. Prepending c++/v1 for those TUs only fixes
+# the check; libc++'s wrapper then #include_next's onward, past c++/v1, and
+# lands on port/shim, which routes to the real host header.
+#
+# Attached per source file rather than with a COMPILE_LANGUAGE genex, because
+# the Xcode generator does not reliably turn a genex-guarded -I into a
+# per-language header search path. See PORT_CXX_STDLIB_DIR use below.
+set(PORT_CXX_STDLIB_DIR "")
+if(APPLE)
+  foreach(_c
+      "${CMAKE_OSX_SYSROOT}/usr/include/c++/v1"
+      "${CMAKE_OSX_SYSROOT}/../../../Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1")
+    get_filename_component(_c "${_c}" ABSOLUTE)
+    if(NOT PORT_CXX_STDLIB_DIR AND IS_DIRECTORY "${_c}")
+      set(PORT_CXX_STDLIB_DIR "${_c}")
+    endif()
+  endforeach()
+  if(PORT_CXX_STDLIB_DIR)
+    message(STATUS "libc++ headers: ${PORT_CXX_STDLIB_DIR}")
+  else()
+    message(WARNING
+      "No libc++ headers found under ${CMAKE_OSX_SYSROOT}; the C++ TUs will "
+      "resolve <cstddef> and friends against the decomp's N64 headers")
+  endif()
 endif()
 
 # port/shim first: PC-only shadow headers (bondtypes.h, bondconstants.h,
@@ -694,6 +711,15 @@ set(SRC
   ${SRC_GU}
   ${SRC_ENGINE}
 )
+
+# See PORT_CXX_STDLIB_DIR above: libc++'s headers have to precede the decomp's
+# on the include path, and only for the C++ TUs.
+if(PORT_CXX_STDLIB_DIR)
+  set(PORT_CXX_SRC ${SRC_PORT_CXX} ${SRC_FAST3D})
+  list(FILTER PORT_CXX_SRC INCLUDE REGEX "\\.cpp$")
+  set_source_files_properties(${PORT_CXX_SRC} PROPERTIES
+    COMPILE_OPTIONS "-I${PORT_CXX_STDLIB_DIR}")
+endif()
 
 # ----------------------------------------------------------------------------
 # Target

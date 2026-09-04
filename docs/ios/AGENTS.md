@@ -94,8 +94,28 @@ cmake -S . -B build-pc -DROMID=ntsc-final && cmake --build build-pc -j"$(nproc)"
 DISPLAY=:0 ./build-pc/ge007.x86_64
 ```
 
-It should reach the front end and render. For memory work, watch for
-`n64mem:` and `D60` lines, which report the window and any rejected DMA target.
+**Judge a run on frames rendered, never on VI posts.** The `D51 vi post #N`
+line comes off a timer and keeps counting at 60 Hz whether or not the game
+submits a display list, so a completely hung level still logs thousands of
+them. The honest number is on the quit line:
+
+```sh
+timeout 40 ./build-pc/ge007.x86_64 -level_09 2>&1 | tee run.log
+grep -E "quit requested after|no frame rendered|FATAL" run.log
+```
+
+Front end is around 1100 frames in 40 s. Zero frames plus a `kernel heartbeat`
+line means it hung, whatever the VI count says (that is D197). Two
+verification passes were reported as clean before this was noticed.
+
+**Check both paths.** The front end and `-level_09` exercise different code:
+`-level_09` skips the front end entirely, so a front-end regression is
+invisible to it. A change that touches thread stacks, the window, or the
+segment table has to be run through both. See "A regression worth
+remembering" in `memory-rebase.md`.
+
+For memory work, watch for `n64mem:` and `D60` lines, which report the window
+and any rejected DMA target.
 
 ## Dispatching a subagent
 
