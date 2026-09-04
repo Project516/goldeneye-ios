@@ -46,6 +46,22 @@ ul{padding-left:19px} li{margin:5px 0}
 <h1>GoldenEye 007 on iOS</h1>
 <p class="sub">Research findings and staged plan. Public repo, unsigned IPAs via GitHub Actions, sideloaded with SideStore. No Mac.</p>
 
+<div class="card risk">
+<p><span class="tag" style="border-color:var(--bad);color:var(--bad)">STAGE 0 RESULT</span></p>
+<p style="margin-bottom:6px"><strong>Answered on device, iOS 26.6.1. The hardcoded memory model cannot work on iOS.</strong></p>
+<pre style="border-left-color:var(--bad);margin:10px 0">__PAGEZERO size: 0x100000000
+
+CART    @ 0x10000000   vm_allocate FAIL kr=1 (invalid address)
+                       mmap MAP_FIXED FAIL errno=12 (ENOMEM)
+DRAM V1 @ 0x70000000   FAIL, same
+DRAM K0 @ 0x80000000   FAIL, same</pre>
+<p>Shrinking <code>__PAGEZERO</code> is not an escape. That build fails to load at all under
+LiveContainer with <code>segment '__TEXT' vm address out of order</code>, because LiveContainer
+<code>dlopen</code>s the guest executable and dyld enforces segment ordering on that path. The
+approach is unsupported on iOS and incompatible with how you actually run apps, so it is dropped.</p>
+<p><strong>Consequence:</strong> Stage 1 now definitely includes rebasing the port's memory model. See below.</p>
+</div>
+
 <h2>What we are starting from</h2>
 
 <p>Your ROM is GoldenEye 007 (USA, rev 0), internal name <code>GOLDENEYE</code>, cart code <code>NGEE</code>,
@@ -89,13 +105,15 @@ before writing anything else.</p>
 <code>vm_allocate(VM_FLAGS_FIXED)</code> and with <code>mmap(MAP_FIXED)</code>, writes a byte to the first and last
 page to prove the memory is actually usable rather than merely reserved, prints
 <code>__PAGEZERO</code>'s real size from the Mach-O header, and renders a verdict on screen.</p>
-<p>Two variants ship: one with the default 4&nbsp;GB <code>__PAGEZERO</code>, one linked with
-<code>-Wl,-pagezero_size,0x4000</code>. CI verifies with <code>otool -l</code> that the two genuinely differ,
-so the second is not silently testing the same thing as the first.</p>
+<p>Suite B then tests the fix: reserve one 4&nbsp;GB-aligned window wherever the kernel will give one,
+commit the cart and DRAM sub-ranges inside it, alias the KSEG0 view onto the same pages with
+<code>vm_remap</code>, and assert that <code>W + (phys | 0x80000000)</code> really does land on the mirrored
+bytes.</p>
 <p>This doubles as the proof of the whole CI recipe: CMake with the Xcode generator,
 <code>CODE_SIGNING_ALLOWED=NO</code>, and <code>Payload/</code>-into-zip IPA packaging. Whatever the verdict,
 the pipeline is then known-good.</p>
-<p><strong>Exit:</strong> you sideload two IPAs and screenshot the verdict.</p>
+<p><strong>Done.</strong> Suite A returned NOT USABLE for all three regions. The probe now carries a
+suite B that tests the proposed replacement on device before we commit to it.</p>
 </div>
 
 <div class="stage"><span class="num">1</span><h3>Fork the port, get it compiling for arm64</h3></div>
@@ -106,10 +124,14 @@ obstacles, both independent of the Stage 0 answer:</p>
 <li><strong>Clang instead of GCC.</strong> The build forces GCC for <code>-fplan9-extensions</code>, which the
 decomp's <code>#define inherits struct</code> idiom in <code>src/bondtypes.h</code> relies on. Clang's
 <code>-fms-extensions</code> covers part of the same ground; the gap has to be measured, not guessed.</li>
-<li><strong>Memory model.</strong> If Stage 0 said yes, keep it and move on. If it said no, rebase the DRAM
-and cart views off fixed addresses. <code>port/src/libultra.c:796</code> already centralises the two bases
-in one array, which is the seam to widen. Perfect Dark proves the engine family does not need the
-trick: its <code>platform.h</code> treats <code>__aarch64__</code> as first-class with <code>PLATFORM_64BIT</code>.</li>
+<li><strong>Memory model, now confirmed required.</strong> Replace the three fixed mappings with a single
+4&nbsp;GB-aligned window <code>W</code>, so an N64 address <code>v</code> becomes <code>W + v</code>. The game's
+<code>| 0x80000000</code> arithmetic keeps working untouched in the low 32 bits, and pointers stored back
+into <code>u32</code> fields still round-trip. <code>port/src/libultra.c:796</code> already collects the two
+bases into one array, which is the seam to widen; the scattered inline
+<code>*(u16 *)(word | 0x80000000)</code> dereferences are the work, and they need a counting pass before
+the effort can be estimated honestly. Perfect Dark proves the engine family does not need the trick:
+its <code>platform.h</code> treats <code>__aarch64__</code> as first-class with <code>PLATFORM_64BIT</code>.</li>
 </ul>
 <p><strong>Exit:</strong> an arm64 iOS binary links, even if it renders nothing.</p>
 </div>
@@ -156,17 +178,18 @@ the port is not yet playable anywhere.</p>
 <h2>Risks, honestly</h2>
 <table>
 <tr><th>Risk</th><th>Severity</th><th>Handling</th></tr>
-<tr><td>Low fixed mappings unavailable on iOS</td><td class="bad">gating</td><td>Stage 0 answers it before any other work</td></tr>
+<tr><td>Low fixed mappings unavailable on iOS</td><td class="bad">confirmed</td><td>Measured on device. Rebase onto a 4&nbsp;GB window is now Stage 1 work</td></tr>
 <tr><td>Clang cannot build the decomp's struct-inheritance idiom</td><td class="warn">high</td><td>Measured in Stage 1; worst case is a mechanical source transform</td></tr>
 <tr><td>The port is not playable on <em>any</em> platform yet</td><td class="warn">high</td><td>We are porting a moving target. Track upstream, do not fork away from it</td></tr>
 <tr><td>No audio exists anywhere in the GoldenEye port</td><td class="warn">medium</td><td>Deferred to Stage 4, scoped as new work</td></tr>
 <tr><td>Upstream is one developer, four stars, weeks old</td><td class="warn">medium</td><td>Perfect Dark is the fallback architecture if it stalls</td></tr>
+<tr><td>Scattered inline KSEG0 dereferences in game code</td><td class="warn">high</td><td>Count them before estimating. Mechanical but wide</td></tr>
 <tr><td>iOS memory limits and background suspension</td><td>low</td><td>Full-screen landscape lock avoids most of it</td></tr>
 </table>
 
 <div class="card note">
-<h3 style="margin-top:0">If Stage 0 comes back negative</h3>
-<p>That is not the end, but it changes the shape of the work. The fallback is to build the iOS
+<h3 style="margin-top:0">If the rebase turns out to be too wide</h3>
+<p>Stage 0 came back negative, so this is live. The fallback is to build the iOS
 platform layer against <code>perfect_dark_pc</code> first, which is already arm64-clean, already playable,
 and shares fast3d and the same <code>port/</code> architecture. You would get a working N64 FPS on your
 phone early, and the renderer backend, touch controls and IPA pipeline all carry over to GoldenEye
