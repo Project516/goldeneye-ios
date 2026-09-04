@@ -121,8 +121,10 @@ int main(int argc, char **argv)
         {
             char msg[1280];
             snprintf(msg, sizeof(msg),
+                     "Build %s (%s).\n\n"
                      "Put a GoldenEye .z64 in this app's Documents folder, "
                      "named exactly one of the paths below, then reopen.\n\n%s",
+                     GE007_VERSION_HASH, GE007_ROMID,
                      romdataGetSearchPaths());
             if (videoInit() == 0) {
                 sysShowMessage("No ROM found", msg);

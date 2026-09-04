@@ -142,7 +142,7 @@ PD_CONSTRUCTOR static void iosBootMarker(void)
     if (!f) {
         return;
     }
-    fprintf(f, "constructors ran\n");
+    fprintf(f, "constructors ran, build %s\n", GE007_VERSION_HASH);
     fprintf(f, "HOME=%s\n", home ? home : "(null)");
     fprintf(f, "documents=%s\n", iosDocumentsDir());
     fclose(f);
