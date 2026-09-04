@@ -173,10 +173,17 @@ Because the repo is public, a workflow must never run with these secrets on a
 `pull_request` from a fork, and must never use `pull_request_target`. GitHub
 withholds secrets from fork PRs on `pull_request`, so keep it that way.
 
-`ios-ipa.yml` cannot succeed yet: CMake builds a plain arm64 executable, not a
-`MACOSX_BUNDLE` target with an `Info.plist`, and fast3d still targets desktop
-GL 3.3. It fails at the bundle-locate step until the app shell and a GLES3 or
-Metal backend land.
+`ios-ipa.yml` produces a real IPA: the bundle target and `Info.plist` landed,
+and the arm64 Mach-O links. It will not render yet, because fast3d still
+targets desktop GL rather than GLES3 or Metal, so expect an app that installs
+and launches and then fails at renderer init. That is the point of building
+it: the renderer work needs something to test against.
+
+`ios-configure.yml` ends by requiring `GoldenEye.app/GoldenEye` to exist. The
+build step is `continue-on-error` so the diagnostic steps can still harvest
+the error profile, which used to mean a failed build reported success. Do not
+read that job's green check as a working build without checking that final
+step ran.
 
 ## Upstream
 

@@ -254,26 +254,63 @@ Cleared so far:
   absolute-symbol scheme itself was never in question: these are consumed as
   data, and a data relocation against an absolute symbol is fine on arm64.
 
+### It links
+
+**2026-09-04: the iOS build succeeds and produces `GoldenEye.app` holding a
+Mach-O 64-bit arm64 executable.** Verified by the last step of
+`ios-configure.yml`, which requires that binary to exist, so the job can no
+longer go green on a failed build.
+
+What cleared the last of it, after the Mach-O assembly work:
+
+- **The C++ include order**, which was the long pole. libc++ on Darwin
+  hard-errors if `<cstddef>` does not get libc++'s own `<stddef.h>`, and the
+  decomp's `include/` sat ahead of the C++ standard library on the path. The
+  fix is `-idirafter` for the whole decomp include list in the C++ TUs.
+  Putting libc++'s `c++/v1` first as a `-I` does not work, because clang drops
+  a `-I` that duplicates a directory already on its system include list, so
+  the flag simply vanished and the decomp's headers stayed in front. This was
+  measured on CI with `c++/v1` printed first in the resolved list and
+  `<cstddef>` still failing. Three earlier attempts failed by guessing where
+  libc++ lived rather than asking the compiler; the toolchain step in the
+  workflow now prints clang's own C++ include search list, so the next path
+  question is answered from output.
+- **A C++ target split.** `port_cxx` exists because per-source
+  `COMPILE_OPTIONS` are emitted after the target's `HEADER_SEARCH_PATHS` under
+  the Xcode generator, so a per-file include order cannot win there. Note that
+  `set_target_properties(... INCLUDE_DIRECTORIES "")` does not clear the
+  property, it sets a one-element list holding `""`, which then sits at the
+  head of the include order.
+- **`CMAKE_OSX_SYSROOT` is the SDK *name*** ("iphoneos") under the Xcode
+  generator, not a path. Every string that concatenated it was silently
+  producing nothing. `PORT_APPLE_SDK` resolves it once via
+  `xcrun --show-sdk-path`.
+- **The truncation class, enumerated rather than crashed into.** The 64-bit
+  guards found by compiler diagnostics rather than by running, which is how
+  the remaining pointer-width sites were closed.
+- **Two symbols the link was still missing.** `crashDumpThreads` did not exist
+  because `port/src/crash.c` was `#if PLATFORM_WINDOWS / #elif PLATFORM_LINUX`
+  with nothing at the bottom; the branch is POSIX, so `platform.h` now defines
+  `PLATFORM_POSIX` and crash.c keys off that. And
+  `objectiveGetStatus_WEAK` came from `#pragma weak name = target`, an ELF
+  directive with no Mach-O equivalent, so under `PORT` it is a real forwarding
+  function.
+
 ### The current blocker
 
-14 errors, all one class, all in the fast3d C++ translation units:
+**The renderer.** `port/fast3d/gfx_opengl.cpp` targets desktop GL and iOS has
+none, so expect the app to launch and fail at renderer init.
 
-    <cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h>
+It is a smaller job than the doc used to imply. `gfx_opengl.cpp` is already
+close to the Perfect Dark original including its GLES accommodations, the
+shader preamble is built from a runtime `gl_glsl_version_str` that already has
+an `"%d es"` form, and `gfx_sdl2.cpp` already lists
+`SDL_GL_CONTEXT_PROFILE_ES` 3.0 among the contexts it will try. The real work
+is `glad`, a desktop GL loader whose headers declare entry points GLES does
+not have.
 
-libc++ on Darwin is stricter than libstdc++ about this. The decomp's own
-`include/stddef.h`, `string.h`, `stdlib.h` and `math.h` sit earlier on the
-include path than the C++ standard library, so `<cstddef>` and friends pick up
-the N64 stubs. `port/shim/` already works around this for the desktop builds
-by routing to the host header by absolute path, which is what the
-`port_host_header()` helper in `CMakeLists.txt` feeds.
-
-The fix is about include-path ordering for C++ TUs specifically, not about
-finding the right header: the shim already knows where the real one is. Look
-at how `SRC_PORT_CXX` gets its include directories, and consider putting the
-libc++ include dir ahead of the decomp's `include/` for those files only.
-
-After that the renderer is next: `port/fast3d/gfx_opengl.cpp` is desktop
-GL 3.3 and iOS has no desktop GL.
+Do not guess at what fails. The app builds and installs now, so get a launch
+and read what it actually says.
 
 ## A regression worth remembering
 
