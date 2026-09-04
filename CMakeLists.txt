@@ -499,7 +499,7 @@ endif()
 # port/shim first: PC-only shadow headers (bondtypes.h, bondconstants.h,
 # PR/gbi.h) that fix N64-compiler assumptions without touching src/ or
 # include/. Inert in the N64 build (its Makefile never sees port/shim).
-include_directories(
+set(PORT_INCLUDE_DIRS
   "${CMAKE_SOURCE_DIR}/port/shim"
   "${CMAKE_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/include"
@@ -511,26 +511,33 @@ include_directories(
   "${CMAKE_SOURCE_DIR}/port/include"
   "${CMAKE_BINARY_DIR}/port/include"
 )
+include_directories(${PORT_INCLUDE_DIRS})
 
 # ----------------------------------------------------------------------------
 # Dependencies: SDL2, zlib, OpenGL
 # ----------------------------------------------------------------------------
 set(LIBS "")
+# Mirrored onto the port_cxx target below, which clears its inherited
+# INCLUDE_DIRECTORIES to control include order.
+set(PORT_EXTRA_INCLUDE_DIRS "")
 
 if(TARGET_IOS)
   # Targets came from the vendored-dependency section above, which runs before
   # any of our compile options so SDL2 and zlib build with clean flags.
   include_directories(SYSTEM "${zlibsrc_SOURCE_DIR}" "${zlibsrc_BINARY_DIR}")
+  list(APPEND PORT_EXTRA_INCLUDE_DIRS "${zlibsrc_SOURCE_DIR}" "${zlibsrc_BINARY_DIR}")
   set(ZLIB_INCLUDE_DIR "${zlibsrc_SOURCE_DIR}")
   list(APPEND LIBS SDL2-static SDL2main zlibstatic)
 else()
   find_package(SDL2 REQUIRED)
   include_directories(SYSTEM "${SDL2_INCLUDE_DIR}")
+  list(APPEND PORT_EXTRA_INCLUDE_DIRS "${SDL2_INCLUDE_DIR}")
   list(APPEND LIBS "${SDL2_LIBRARY}")
 
   find_package(ZLIB REQUIRED)
   if(ZLIB_INCLUDE_DIR)
     include_directories(SYSTEM "${ZLIB_INCLUDE_DIR}")
+    list(APPEND PORT_EXTRA_INCLUDE_DIRS "${ZLIB_INCLUDE_DIR}")
   endif()
   list(APPEND LIBS "${ZLIB_LIBRARY}")
 endif()
@@ -585,8 +592,8 @@ list(APPEND LIBS "${EXTRA_LIBRARIES}")
 # Port layer (shims + software RSP).
 file(GLOB_RECURSE SRC_PORT      "${CMAKE_SOURCE_DIR}/port/src/*.c")
 file(GLOB_RECURSE SRC_PORT_CXX  "${CMAKE_SOURCE_DIR}/port/src/*.cpp")
-file(GLOB_RECURSE SRC_FAST3D    "${CMAKE_SOURCE_DIR}/port/fast3d/*.cpp"
-                               "${CMAKE_SOURCE_DIR}/port/fast3d/glad/*.c")
+file(GLOB_RECURSE SRC_FAST3D_CXX "${CMAKE_SOURCE_DIR}/port/fast3d/*.cpp")
+file(GLOB_RECURSE SRC_FAST3D_C  "${CMAKE_SOURCE_DIR}/port/fast3d/glad/*.c")
 
 # Generated absolute ROM asset symbols for this region (see
 # scripts/gen_romassets.py). Defines every obseg/ramrom/music label and the
@@ -734,8 +741,7 @@ set(SRC
   ${SRC_GAME}
   ${SRC_PORT}
   ${SRC_ROMASSETS}
-  ${SRC_PORT_CXX}
-  ${SRC_FAST3D}
+  ${SRC_FAST3D_C}
   ${SRC_LIBAUDIO}
   ${SRC_LIBULTRARE_AUDIO}
   ${SRC_LIBULTRARE_DATA}
@@ -745,21 +751,37 @@ set(SRC
   ${SRC_ENGINE}
 )
 
-# See PORT_CXX_STDLIB_DIR above: libc++'s headers have to precede the decomp's
-# on the include path, and only for the C++ TUs.
-if(PORT_CXX_STDLIB_DIR)
-  set(PORT_CXX_SRC ${SRC_PORT_CXX} ${SRC_FAST3D})
-  list(FILTER PORT_CXX_SRC INCLUDE REGEX "\\.cpp$")
-  set_source_files_properties(${PORT_CXX_SRC} PROPERTIES
-    COMPILE_OPTIONS "-I${PORT_CXX_STDLIB_DIR}")
-endif()
-
 # ----------------------------------------------------------------------------
 # Target
 # ----------------------------------------------------------------------------
+# The C++ translation units are their own target purely so they can control
+# their include ORDER. libc++ requires its own headers to precede any C
+# standard library and it checks: <cstddef> includes <stddef.h> and errors out
+# if what came back was not libc++'s. The decomp ships stddef.h, string.h,
+# stdlib.h, math.h and limits.h, and the game's C code needs those first.
+#
+# Per-source COMPILE_OPTIONS cannot fix this: the Xcode generator puts per-file
+# flags after the target's HEADER_SEARCH_PATHS, so the decomp's -I list still
+# wins. A COMPILE_LANGUAGE genex on include directories is not supported by
+# that generator either. A separate target with its own list is the mechanism
+# that works. Once c++/v1 is genuinely first, libc++'s wrapper #include_next's
+# onward and lands on port/shim, which routes to the real host header.
+add_library(port_cxx STATIC ${SRC_FAST3D_CXX} ${SRC_PORT_CXX})
+set_target_properties(port_cxx PROPERTIES INCLUDE_DIRECTORIES "")
+# PORT_CXX_STDLIB_DIR is empty off Apple, where libstdc++ makes no such demand
+# and the compiler's default order already works.
+set(PORT_CXX_INCLUDE_DIRS ${PORT_INCLUDE_DIRS} ${PORT_EXTRA_INCLUDE_DIRS})
+if(PORT_CXX_STDLIB_DIR)
+  list(PREPEND PORT_CXX_INCLUDE_DIRS "${PORT_CXX_STDLIB_DIR}")
+endif()
+target_include_directories(port_cxx PRIVATE ${PORT_CXX_INCLUDE_DIRS})
+# For the include directories the dependency targets carry as usage
+# requirements, chiefly SDL2's on iOS where it is built from source.
+target_link_libraries(port_cxx PRIVATE ${LIBS})
+
 set(BIN_NAME "ge007${BIN_REGION}.${TARGET_ARCH}")
 add_executable(ge007 ${SRC})
-target_link_libraries(ge007 ${LIBS})
+target_link_libraries(ge007 port_cxx ${LIBS})
 set_target_properties(ge007 PROPERTIES OUTPUT_NAME "${BIN_NAME}")
 if(WIN32)
   set_target_properties(ge007 PROPERTIES WIN32_EXECUTABLE TRUE)
