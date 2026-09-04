@@ -51,7 +51,9 @@ jobs:
           TAG="token-check-${{ github.run_id }}"
           gh release create "$TAG" --repo "$REPO" --draft \
             --title "token check" --notes "Delete me."
-          gh release delete "$TAG" --repo "$REPO" --yes --cleanup-tag
+          # No --cleanup-tag: a draft release never creates the tag, so
+          # deleting it 422s on a reference that does not exist.
+          gh release delete "$TAG" --repo "$REPO" --yes
           echo "IPA_DROP_TOKEN can read and publish to $REPO"
 
   ipa:
