@@ -103,6 +103,29 @@ static FILE *iosLogFile(void)
 }
 #endif
 
+#if defined(PLATFORM_IOS)
+/*
+ * Runs before UIApplicationMain, so this file existing is proof of two things
+ * that are otherwise indistinguishable from a black screen: the process
+ * started, and Documents is writable through HOME. Read it together with
+ * ge007.log. Both present: main ran. This one only: the failure is between
+ * the constructors and main. Neither: either the process never started or
+ * HOME is not the app container, and the contents here say which.
+ */
+PD_CONSTRUCTOR static void iosBootMarker(void)
+{
+    const char *home = getenv("HOME");
+    FILE *f = fopen(sysResolvePath("$S/ge007-boot.txt"), "wb");
+    if (!f) {
+        return;
+    }
+    fprintf(f, "constructors ran\n");
+    fprintf(f, "HOME=%s\n", home ? home : "(null)");
+    fprintf(f, "documents=%s\n", iosDocumentsDir());
+    fclose(f);
+}
+#endif
+
 void sysLogPrintf(enum LogLevel level, const char *fmt, ...)
 {
     static const char *tags[] = { "ERROR", "WARN ", "NOTE ", "INFO ", "DEBUG" };
