@@ -268,3 +268,38 @@ libc++ include dir ahead of the decomp's `include/` for those files only.
 
 After that the renderer is next: `port/fast3d/gfx_opengl.cpp` is desktop
 GL 3.3 and iOS has no desktop GL.
+
+## REGRESSION, fix this first
+
+The Linux build crashes on startup as of `b3c5402`. A clean build reaches one
+VI post and dies in `gfx_run_dl` (`port/fast3d/gfx_pc.cpp:2679`, the
+`cmd->words.w0` read at the top of the command loop), with the same symptom
+under both `/usr/bin/gcc` and the ccache shim, so it is the tree and not the
+toolchain.
+
+It was working at `ffb9b76` ("Move thread stacks clear of the image range"),
+verified by a 90 second `-level_09` run. Only two commits since then touch
+anything Linux compiles, so bisect should be quick:
+
+- `6bd9b27` dropped `#define _GNU_SOURCE` from `port/src/dram.c`. Should be
+  inert, since `memfd_create` moved to `n64mem.c`, but glibc gates some
+  `mman.h` constants on feature-test macros, so check `MAP_ANONYMOUS` is still
+  what it was.
+- `18fe877` changed how the host C-library headers are resolved. It reports
+  the same three paths as before on this machine, but confirm
+  `PORT_HOST_STDDEF_H` and `PORT_REAL_ZLIB_H` still resolve: those still use
+  `_PORT_GCC_DIR`, whose definition moved in that commit.
+
+The other commits are Apple-only (`_FORTIFY_SOURCE`, the alias macros) or
+touch CI and `gen_romassets.py`'s `--macho` path, which the ELF output does
+not take.
+
+To bisect without disturbing the tree:
+
+    git worktree add /tmp/wt <sha>
+    cmake -S /tmp/wt -B /tmp/wtb -DROMID=ntsc-final
+    cmake --build /tmp/wtb -j"$(nproc)"
+    DISPLAY=:0 timeout 45 /tmp/wtb/ge007.x86_64
+
+`data/` is at the repo root and is found relative to the binary, so a worktree
+build may need `data/` symlinked next to it.
