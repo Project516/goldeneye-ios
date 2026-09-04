@@ -49,7 +49,13 @@ void alCSeqNew(ALCSeq *seq, u8 *ptr)
         {
             flagTmp = 1 << i;
             seq->validTracks |= flagTmp;
+#ifdef PORT
+            /* ptr is a real pointer to the loaded sequence; (u32) drops its
+             * high half. tmpOff is a byte offset within the sequence. */
+            seq->curLoc[i] = (u8 *)ptr + tmpOff;
+#else
             seq->curLoc[i] = (u8*)((u32)ptr + tmpOff);
+#endif
             seq->evtDeltaTicks[i] = __readVarLen(seq,i);
             /*__alCSeqGetTrackEvent(seq,i); prime the event buffers  */
         }

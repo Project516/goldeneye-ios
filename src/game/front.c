@@ -2213,7 +2213,13 @@ void frontCleanUpWalletBond(void)
 void init_menu05_fileselect(void)
 {
     s32 size = 0x6e000;
+#ifdef PORT
+    /* ptr_logo_and_walletbond_DL is a real buffer pointer; (s32) drops its
+     * high half. The addend is a plain byte offset. */
+    Gfx* DL = (Gfx *)(ptr_logo_and_walletbond_DL + (4096*10));
+#else
     Gfx* DL = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+#endif
     int i;
 
     prev_keypresses = FALSE;
@@ -6580,7 +6586,11 @@ void load_briefing_text_for_stage(void)
     s32 argg;
 
     // what is this
+#ifdef PORT
+    temp_s0 = (Gfx *)(ptr_logo_and_walletbond_DL + (4096*10));
+#else
     temp_s0 = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+#endif
 
     // alright
     argg = 0x200;

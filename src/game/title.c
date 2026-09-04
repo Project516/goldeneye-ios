@@ -68,7 +68,13 @@ s32 dword_CODE_bss_80069588;
 //CODE.bss:8006958C
 s32 dword_CODE_bss_8006958C;
 //CODE.bss:80069590
+#ifdef PORT
+/* Holds a real buffer pointer (ptr_logo_and_walletbond_DL) and is used both
+ * as a romCopy target and via osVirtualToPhysical, so it must stay a pointer. */
+void *virtualaddress;
+#else
 s32 virtualaddress;
+#endif
 
 /**
  * Address 80069594
@@ -391,7 +397,11 @@ Gfx *load_display_rare_logo(Gfx *gdl, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
 extern void *_rarewarelogoSegmentRomStart;
 extern void *_rarewarelogoSegmentStart;
 extern void *_rarewarelogoSegmentEnd; 
+#ifdef PORT
+void setupRarewareLogoData(void *address, s32 size) {
+#else
 void setupRarewareLogoData(s32 address, s32 size) {
+#endif
     gunbarrel_mode = 0;
     g_TitleX = 880.0f;
     D_8002A89C = -40.0f;
