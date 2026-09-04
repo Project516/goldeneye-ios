@@ -168,7 +168,11 @@ int romdataInit(void)
     }
 
     /* Try each candidate in the data dir, next to the exe, and in the CWD
-     * (the decomp repo ships baserom.<r>.z64 at the repo root). */
+     * (the decomp repo ships baserom.<r>.z64 at the repo root). Every path
+     * actually tried is accumulated, because "$S/" and "$E/" expand
+     * differently per platform (Documents on iOS) and the failure message is
+     * the only thing the user has to go on. */
+    char tried[1024] = "";
     for (char *tok = strtok(listBuf, "|"); tok;
          tok = strtok(NULL, "|")) {
         static const char *locs[3] = { "$S/", "$E/", "./" };
@@ -177,8 +181,17 @@ int romdataInit(void)
 
         for (li = 0; li < 3 && !f; li++) {
             char pathbuf[1024];
+            const char *resolved;
             snprintf(pathbuf, sizeof(pathbuf), "%s%s", locs[li], tok);
-            f = fsOpen(sysResolvePath(pathbuf), "rb");
+            resolved = sysResolvePath(pathbuf);
+            /* "$S/", "$E/" and "./" collapse onto each other on some
+             * platforms, so only list each distinct path once. */
+            if (!strstr(tried, resolved)) {
+                size_t used = strlen(tried);
+                snprintf(tried + used, sizeof(tried) - used, "%s  %s",
+                         used ? "\n" : "", resolved);
+            }
+            f = fsOpen(resolved, "rb");
         }
         if (!f)
             continue;
@@ -240,8 +253,7 @@ int romdataInit(void)
         return 0;
     }
 
-    sysLogPrintf(LOG_ERROR, "romdataInit: no ROM found (tried %s in data/ "
-                 "and exe dir)", list);
+    sysLogPrintf(LOG_ERROR, "romdataInit: no ROM found. Tried:\n%s", tried);
     return -1;
 }
 

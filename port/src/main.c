@@ -107,8 +107,11 @@ int main(int argc, char **argv)
 
     /* 2a. Load the ROM and map segments. */
     if (romdataInit() != 0) {
-        sysLogPrintf(LOG_ERROR, "Failed to load ROM (expected a .z64 in the "
-                    "data/ dir, see README)");
+        /* romdataInit() has already listed every path it tried, which is
+         * the answer; naming a directory here would be wrong on iOS, where
+         * both roots expand to the app's Documents folder. */
+        sysLogPrintf(LOG_ERROR, "Failed to load ROM. Put a GoldenEye .z64 at "
+                    "one of the paths listed above.");
         return 1;
     }
 
