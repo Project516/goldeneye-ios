@@ -56,7 +56,6 @@
 #if defined(PLATFORM_WINDOWS)
 #include <windows.h>
 #else
-#define _GNU_SOURCE /* memfd_create — must precede all system headers */
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
