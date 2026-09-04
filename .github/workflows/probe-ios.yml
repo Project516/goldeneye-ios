@@ -53,17 +53,6 @@ jobs:
           done
           ls -lh out
 
-      # Confirm the linker actually honoured -pagezero_size, otherwise the
-      # lowmem variant silently tests the same thing as the default one.
-      - name: Verify __PAGEZERO differs between variants
-        run: |
-          set -eux
-          for app in build-ios/Release-iphoneos/*.app; do
-            name=$(basename "$app" .app)
-            echo "--- $name ---"
-            otool -l "$app/$name" | grep -A4 '__PAGEZERO' || echo "no __PAGEZERO segment"
-          done
-
       - uses: actions/upload-artifact@v4
         with:
           name: geprobe-ipas
