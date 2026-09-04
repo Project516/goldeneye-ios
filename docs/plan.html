@@ -133,6 +133,32 @@ bases into one array, which is the seam to widen; the scattered inline
 the effort can be estimated honestly. Perfect Dark proves the engine family does not need the trick:
 its <code>platform.h</code> treats <code>__aarch64__</code> as first-class with <code>PLATFORM_64BIT</code>.</li>
 </ul>
+<p><strong>Scope, measured rather than guessed.</strong> 207 call sites already funnel through four
+symbols (<code>osVirtualToPhysical</code> 131, <code>OS_K0_TO_PHYSICAL</code> 38,
+<code>PHYS_TO_K0</code> 36, <code>osPhysicalToVirtual</code> 2), defined in two shim headers plus one
+function, so fixing those definitions moves all of them at once. A fifth seam,
+<code>seg_addr()</code> at <code>port/fast3d/gfx_pc.cpp:2627</code>, absorbs essentially all display-list
+resolution through hardcoded range checks in one function.</p>
+<p>That leaves roughly 10-15 files in <code>port/</code> for the mechanical core, and 40-60 call sites in
+<code>src/</code> to review: the 33 <code>romCopy()</code> callers, and 6-8 raw inline casts that bypass every
+seam in <code>bg.c</code>, <code>propobj.c</code>, <code>title.c</code> and <code>model.c</code>.</p>
+
+<div class="card risk" style="margin:16px 0">
+<p style="margin-top:0"><strong>Two constraints found while sizing this.</strong></p>
+<p><code>port/src/libultra.c:350</code> is a <em>second</em> below-4&nbsp;GB dependency:
+<code>portAllocLowStack</code> puts thread stacks in the low 2&nbsp;GB with <code>MAP_32BIT</code> so that
+game code truncating a stack pointer to <code>u32</code> round-trips. <code>MAP_32BIT</code> does not exist on
+Darwin, so that branch silently falls through to an ordinary <code>mmap</code> and the idiom breaks.
+Stacks have to move inside the window too.</p>
+<p><code>src/game/model.c:5876-5889</code> truncates a real pointer to <code>u32</code>, does arithmetic,
+then casts back and dereferences. This makes <strong>exact 4&nbsp;GiB alignment of W a hard
+requirement</strong>, not a convenience: only then does truncation yield <code>v</code> and re-adding
+<code>W</code> recover the pointer.</p>
+<p>Highest risk is <code>piServiceDma</code>'s destination path. <code>dstVA</code> is a raw
+<code>void *</code> with no conversion funnel anywhere, so an incomplete audit of the
+<code>romCopy</code> callers leaves a silent wrong-pointer bug rather than a crash.</p>
+</div>
+
 <p><strong>Exit:</strong> an arm64 iOS binary links, even if it renders nothing.</p>
 </div>
 
@@ -183,7 +209,9 @@ the port is not yet playable anywhere.</p>
 <tr><td>The port is not playable on <em>any</em> platform yet</td><td class="warn">high</td><td>We are porting a moving target. Track upstream, do not fork away from it</td></tr>
 <tr><td>No audio exists anywhere in the GoldenEye port</td><td class="warn">medium</td><td>Deferred to Stage 4, scoped as new work</td></tr>
 <tr><td>Upstream is one developer, four stars, weeks old</td><td class="warn">medium</td><td>Perfect Dark is the fallback architecture if it stalls</td></tr>
-<tr><td>Scattered inline KSEG0 dereferences in game code</td><td class="warn">high</td><td>Count them before estimating. Mechanical but wide</td></tr>
+<tr><td>Scattered inline KSEG0 dereferences in game code</td><td class="ok">measured</td><td>Only 6-8 bypass the seams. 207 sites move via 4 symbol definitions</td></tr>
+<tr><td><code>piServiceDma</code> destination pointers have no funnel</td><td class="bad">high</td><td>Audit all 33 <code>romCopy</code> callers. Failure mode is silent, not a crash</td></tr>
+<tr><td>Thread stacks are a second sub-4&nbsp;GB dependency</td><td class="warn">medium</td><td>Move them inside the window; <code>MAP_32BIT</code> is a no-op on Darwin anyway</td></tr>
 <tr><td>iOS memory limits and background suspension</td><td>low</td><td>Full-screen landscape lock avoids most of it</td></tr>
 </table>
 
