@@ -63,7 +63,7 @@ approach is unsupported on iOS and incompatible with how you actually run apps, 
 </div>
 
 <div class="card" style="border-left:3px solid var(--ok)">
-<p><span class="tag" style="border-color:var(--ok);color:var(--ok)">STAGE 0 RESULT, PART TWO</span></p>
+<p><span class="tag" style="border-color:var(--ok);color:var(--ok)">STAGE 0 COMPLETE</span></p>
 <p style="margin-bottom:6px"><strong>The replacement works on the same device.</strong></p>
 <pre style="border-left-color:var(--ok);margin:10px 0">reserve 6.01 GB   FAIL  errno=12 (ENOMEM)
 fixed base        OK    window base 0x300000000
@@ -71,6 +71,13 @@ commit CART       OK    0x310000000 rw=yes
 commit DRAM V1    OK    0x370000000 rw=yes
 alias K0-&gt;V1      OK    shared fwd=yes rev=yes
 KSEG0 arithmetic  OK    W+(phys|0x80000000) mirrors W+V1+phys</pre>
+<pre style="border-left-color:var(--ok);margin:10px 0">commit stack      OK    0x320000000 (1024 KB)
+pthread_create    OK    ran on our stack
+locals in window  OK
+u32 round-trip    OK    W+(u32)&amp;local == &amp;local</pre>
+<p>Suite C closes the <code>portAllocLowStack</code> gap: a thread runs on a stack committed inside the
+window, and the truncate-then-recover idiom that <code>MAP_32BIT</code> bought on Linux works without
+it. Every assumption behind the rebase is now measured on device.</p>
 <p>Two things to carry into the implementation. iOS refused the over-reserve-and-trim approach, so the
 port must ask for a <em>specific</em> 4&nbsp;GB-aligned base and walk candidates on failure, not
 reserve a large span and carve it. And <code>0x300000000</code> is exactly 4&nbsp;GiB-aligned, which is
