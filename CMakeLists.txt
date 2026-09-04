@@ -770,20 +770,31 @@ add_library(port_cxx STATIC ${SRC_FAST3D_CXX} ${SRC_PORT_CXX})
 # Unset it. Assigning "" leaves a one-element list holding an empty string,
 # which then sits at the head of the include order.
 set_property(TARGET port_cxx PROPERTY INCLUDE_DIRECTORIES)
-# PORT_CXX_STDLIB_DIR is empty off Apple, where libstdc++ makes no such demand
-# and the compiler's default order already works.
+
+# -idirafter, not -I. Putting the SDK's c++/v1 first as a -I does not work:
+# clang drops a -I that duplicates a directory already on its system include
+# list, so the flag vanished and the decomp's headers stayed in front. Measured
+# on CI, with c++/v1 printed first in this very list and <cstddef> still
+# failing.
+#
+# -idirafter sidesteps the ordering question entirely: it places these after
+# every system directory regardless of flag order, so <stddef.h>, <math.h>,
+# <string.h>, <stdlib.h> and <limits.h> resolve to the SDK's and libc++'s
+# checks pass, while <PR/gbi.h>, "gfx_api.h" and friends still resolve because
+# nothing else provides them. port/shim only shadows decomp headers
+# (bondtypes.h, bondconstants.h, PR/*), never a system one, so nothing that
+# needs shadowing loses out.
 set(PORT_CXX_INCLUDE_DIRS ${PORT_INCLUDE_DIRS} ${PORT_EXTRA_INCLUDE_DIRS})
-if(PORT_CXX_STDLIB_DIR)
-  list(PREPEND PORT_CXX_INCLUDE_DIRS "${PORT_CXX_STDLIB_DIR}")
-endif()
-target_include_directories(port_cxx PRIVATE ${PORT_CXX_INCLUDE_DIRS})
+set(PORT_CXX_IDIRAFTER "")
+foreach(_d IN LISTS PORT_CXX_INCLUDE_DIRS)
+  list(APPEND PORT_CXX_IDIRAFTER "-idirafter${_d}")
+endforeach()
+target_compile_options(port_cxx PRIVATE ${PORT_CXX_IDIRAFTER})
 # For the include directories the dependency targets carry as usage
 # requirements, chiefly SDL2's on iOS where it is built from source.
 target_link_libraries(port_cxx PRIVATE ${LIBS})
-# Print the resolved order. Guessing at this has already cost several CI runs.
-get_target_property(_port_cxx_inc port_cxx INCLUDE_DIRECTORIES)
-message(STATUS "port_cxx include order:")
-foreach(_d IN LISTS _port_cxx_inc)
+message(STATUS "port_cxx include order (all -idirafter, i.e. after system):")
+foreach(_d IN LISTS PORT_CXX_INCLUDE_DIRS)
   message(STATUS "  ${_d}")
 endforeach()
 

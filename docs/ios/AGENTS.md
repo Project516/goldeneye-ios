@@ -91,8 +91,19 @@ The Linux build runs, so use it. Do not rely on a clean compile.
 
 ```sh
 cmake -S . -B build-pc -DROMID=ntsc-final && cmake --build build-pc -j"$(nproc)"
-DISPLAY=:0 ./build-pc/ge007.x86_64
+tools_pc/run-headless.sh 40             # front end
+tools_pc/run-headless.sh 25 -level_09   # a solo level
 ```
+
+**Never run it on the real display.** The window takes focus every time it
+opens, so a sweep makes the machine unusable for whoever is at the keyboard.
+`run-headless.sh` uses Xvfb, which gives Mesa software GL: slower, same frames.
+It prints the numbers below and symbolicates the first crash for you.
+
+Do not rebuild while a sweep is running either. The build overwrites the
+binary mid-sweep and every remaining level reports zero frames with no crash
+and no heartbeat, which looks like a new failure mode and is not one. Copy the
+binary aside, or wait.
 
 **Judge a run on frames rendered, never on VI posts.** The `D51 vi post #N`
 line comes off a timer and keeps counting at 60 Hz whether or not the game
