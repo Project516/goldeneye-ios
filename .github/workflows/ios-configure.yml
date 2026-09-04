@@ -20,9 +20,13 @@ on:
 permissions:
   contents: read
 
+# Not cancel-in-progress. This workflow exists to report the iOS error
+# profile for a commit, and a push during a run destroys exactly that: several
+# runs have been cancelled mid-configure and reported nothing, which reads
+# identically to "zero errors".
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   configure:

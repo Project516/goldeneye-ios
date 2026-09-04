@@ -76,7 +76,16 @@ bool actor_aim_at_actor(ChrRecord *self, s32 attack_type, s32 b);
 bool actor_kneel_aim_at_actor(ChrRecord *self, s32 targettype, s32 targetid);
 bool check_set_actor_standing_still(ChrRecord *self, s32 faceentitytype, s32 faceentityid);
 bool chrGoToPad(ChrRecord *self, s32 padid, SPEED speed);
+#ifdef PORT
+/* D197: the parameter is a patrol-path record ADDRESS, not an id, despite the
+ * name: chrai.c passes pathFindById()'s result and the body forwards it to
+ * set_actor_on_path(ChrRecord *, struct patrol_path *). Declaring it s32
+ * truncates a 64-bit pointer at the call. The body only tests it for zero and
+ * forwards it, so widening the type changes nothing else. */
+bool if_actor_able_set_on_path(ChrRecord *self, struct patrol_path *pathid);
+#else
 bool if_actor_able_set_on_path(ChrRecord *self, s32 pathid);
+#endif
 f32 chrlvGetSubrotySideback(ChrRecord *arg0);
 f32 chrlvGetAimLimitAngle(f32 arg0);
 void chrlvUpdateAimendbackShoulders(ChrRecord *arg0, void *arg1, s32 same, s32 swap, f32 next);
