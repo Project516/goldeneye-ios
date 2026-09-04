@@ -7,6 +7,17 @@ auto-injected, D121), `GE_PCDUMP="80-260:40"`, ~24 s watchdog then
 0x140000000). "render %" = `tools_pc/pixcount.py` non-clear on the last
 captured frame. Binary at `f2beae4b` + this session's build.
 
+**iOS fork, 2026-09-04: solo levels render on Linux again after the window
+rebase.** `-level_09`, `-level_20` and `-level_27` each load and render for a
+40 s unattended run with zero crashes and no heartbeat warnings (~620 frames;
+the front end does ~1180, levels are heavier). Before this, every level
+rendered **zero** frames: the stage mempool was exhausted by a truncated
+pointer defeating the allocation shrink, and eleven more truncation sites sat
+behind it. All of D197. The remaining 18 levels have not been swept yet.
+
+Judge these runs on `quit requested after N frames rendered`, not on the
+`D51 vi post` counter, which is timer-driven and keeps counting through a hang.
+
 **M-49 (2026-09-04), full-campaign playtest, upstream v0.1.0 win64 bundle.**
 Upstream's maintainer played every solo mission on the packaged Windows build
 (fresh save). **19 / 21 completable start to finish.** Only two crashes in the
