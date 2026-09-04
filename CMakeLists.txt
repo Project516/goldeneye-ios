@@ -249,6 +249,39 @@ configure_file(
   "${CMAKE_BINARY_DIR}/port/include/hoststddef.h" @ONLY)
 
 # ----------------------------------------------------------------------------
+# Vendored dependencies (iOS)
+# ----------------------------------------------------------------------------
+# This has to run BEFORE any add_definitions/add_compile_options/
+# include_directories below. CMake directory properties are inherited by every
+# subdirectory added afterwards, and FetchContent adds one. The decomp puts its
+# own limits.h, string.h, stdlib.h and math.h on the include path, so a
+# dependency compiled with our -I list resolves the SDK's <limits.h> to the N64
+# stub -- which is how SDL2's UIKit code came to fail on LONG_MAX from
+# Foundation's NSObjCRuntime.h.
+if(TARGET_IOS)
+  # No system SDL2 on an iOS SDK, so build it. SDL2 supports iOS upstream and
+  # brings its own UIKit app shell, which is what provides main() there.
+  include(FetchContent)
+  set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+  set(SDL_STATIC ON CACHE BOOL "" FORCE)
+  set(SDL_TEST OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(SDL2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG release-2.30.9
+    GIT_SHALLOW TRUE)
+  FetchContent_MakeAvailable(SDL2)
+
+  # zlib likewise. The port needs real inflate for decompressdata
+  # (port/src/rzdecomp.c).
+  set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(ZLIBSRC
+    GIT_REPOSITORY https://github.com/madler/zlib.git
+    GIT_TAG v1.3.1
+    GIT_SHALLOW TRUE)
+  FetchContent_MakeAvailable(ZLIBSRC)
+endif()
+
+# ----------------------------------------------------------------------------
 # Compiler definitions & flags
 # ----------------------------------------------------------------------------
 add_definitions(
@@ -409,30 +442,11 @@ include_directories(
 set(LIBS "")
 
 if(TARGET_IOS)
-  # No system SDL2 on an iOS SDK, so build it. SDL2 supports iOS upstream and
-  # brings its own UIKit app shell, which is what provides main() there.
-  include(FetchContent)
-  set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-  set(SDL_STATIC ON CACHE BOOL "" FORCE)
-  set(SDL_TEST OFF CACHE BOOL "" FORCE)
-  FetchContent_Declare(SDL2
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG release-2.30.9
-    GIT_SHALLOW TRUE)
-  FetchContent_MakeAvailable(SDL2)
-  list(APPEND LIBS SDL2-static SDL2main)
-
-  # zlib likewise. The port needs real inflate for decompressdata
-  # (port/src/rzdecomp.c).
-  set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-  FetchContent_Declare(ZLIBSRC
-    GIT_REPOSITORY https://github.com/madler/zlib.git
-    GIT_TAG v1.3.1
-    GIT_SHALLOW TRUE)
-  FetchContent_MakeAvailable(ZLIBSRC)
+  # Targets came from the vendored-dependency section above, which runs before
+  # any of our compile options so SDL2 and zlib build with clean flags.
   include_directories(SYSTEM "${zlibsrc_SOURCE_DIR}" "${zlibsrc_BINARY_DIR}")
   set(ZLIB_INCLUDE_DIR "${zlibsrc_SOURCE_DIR}")
-  list(APPEND LIBS zlibstatic)
+  list(APPEND LIBS SDL2-static SDL2main zlibstatic)
 else()
   find_package(SDL2 REQUIRED)
   include_directories(SYSTEM "${SDL2_INCLUDE_DIR}")
