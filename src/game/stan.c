@@ -1,3 +1,6 @@
+#ifdef PORT
+#include "n64mem.h"
+#endif
 #include <ultra64.h>
 //#include <bondtypes.h>
 #include <deb.h>
@@ -3232,7 +3235,13 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
     assert(*r==0);
     #endif
   
+#ifdef PORT
+    /* ptr_firstroom still holds a file-relative address here, and delta
+     * rebases it into the window, so the result needs the base. */
+    standTileStart = (StandTile *)((u8 *)N64_TO_HOST((u32)((s32)(uintptr_t)file->ptr_firstroom + delta)) - 0x80);
+#else
     standTileStart = (StandTile *)(((s32)file->ptr_firstroom + delta) - 0x80);
+#endif
     ptr_firstroom_0 = (s32)file->ptr_firstroom + delta;
     
     newBase = list_of_tilesizes;
@@ -3242,7 +3251,13 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
     {
         do
         {
+#ifdef PORT
+            /* Rebase straight to a host pointer so every later dereference of
+             * these slots works without further conversion. */
+            *roomPtr = N64_TO_HOST((u32)((s32)(uintptr_t)(*roomPtr) + delta));
+#else
             *roomPtr = (void *) ((s32) (*roomPtr) + delta);
+#endif
             roomPtr++;
         }
         while (*roomPtr != NULL);
@@ -3259,8 +3274,13 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
             // Fake but required for matching.
             if (tile->tail.half);
             
+#ifdef PORT
+            tile = (StandTile *)((u8 *)tile
+                + (tileSizes = newBase)[(tile->tail.half >> 0xc) & 0xf]);
+#else
             tile = (StandTile *)((s32)tile
                 + (tileSizes = newBase)[(tile->tail.half >> 0xc) & 0xf]);
+#endif
         } 
         while (*(s32 *) tile != 0);
     }
