@@ -1665,7 +1665,13 @@ void texReadAlphaBits(u8 *image,s32 count)
  */
 s32 texReadUncompressed(u8 *dst, s32 width, s32 height, s32 format)
 {
+#ifdef PORT
+	/* D197: the dst16/dst8 rounding below was already widened; this one was
+	 * missed and truncates the destination pointer. */
+	u32 *dst32 = (u32 *)(((uintptr_t)dst + 0xf) & ~(uintptr_t)0xf);
+#else
 	u32 *dst32 = (u32 *)(((u32)dst + 0xf) & ~0xf);
+#endif
 #ifdef PORT
 	u16 *dst16 = (u16 *)(((uintptr_t)dst + 7) & ~(uintptr_t)7);
 	u8 *dst8 = (u8 *)(((uintptr_t)dst + 7) & ~(uintptr_t)7);

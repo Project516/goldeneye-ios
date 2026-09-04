@@ -8829,7 +8829,7 @@ void mp_respawn_handler(void)
             switch (intro_record->type) 
             {
                 case 0: // INTROTYPE_SPAWN
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSpawn));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroSpawn));
                     break;
                 case 1: // INTROTYPE_ITEM
                     if (check_ramrom_flags() == ((struct SetupIntroAmmo*)intro_record)->is_demo_playback) {
@@ -8839,28 +8839,28 @@ void mp_respawn_handler(void)
                             bondinvAddInvItem(((struct SetupIntroItem*)intro_record)->item_right);
                         }
                     }
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroItem));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroItem));
                     break;
                 case 2: // INTROTYPE_AMMO
                     if (check_ramrom_flags() == ((struct SetupIntroAmmo*)intro_record)->is_demo_playback) {
                         give_cur_player_ammo(((struct SetupIntroAmmo*)intro_record)->ammo_type, ((struct SetupIntroAmmo*)intro_record)->ammo_amount);
                     }
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAmmo));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroAmmo));
                     break;
                 case 3: // INTROTYPE_SWIRL
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSwirl));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroSwirl));
                     break;
                 case 4: // INTROTYPE_ANIM
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAnim));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroAnim));
                     break;
                 case 5: // INTROTYPE_CUFF
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCuff));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroCuff));
                     break;
                 case 6: // INTROTYPE_CAMERA
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCamera));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroCamera));
                     break;
                 default: // INTROTYPE_WATCH, INTROTYPE_CREDITS
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroEmpty));
+                    intro_record = PORT_PTRADD(struct SetupIntroEmpty *, intro_record, sizeof(struct SetupIntroEmpty));
                     break;
             }
     #ifdef DEBUG
@@ -10866,7 +10866,16 @@ void sub_GAME_7F08BEEC(Mtxf *matrices, s32 count)
 
     for (i = 0, j = 0; i < count; i++, j += sizeof(Mtxf))
     {
+#ifdef PORT
+        /* D197: j is a byte offset (`j += sizeof(Mtxf)`), so this is
+         * `matrices` advanced by it. Truncating the pointer to add loses the
+         * top half. The matrix_4x4_f32_to_s32 call below already uses proper
+         * pointer arithmetic. */
+        matrix_4x4_multiply_homogeneous(currentPlayerGetViewToWorldMtxf(),
+                                        PORT_PTRADD(Mtxf *, matrices, j), &sp40);
+#else
         matrix_4x4_multiply_homogeneous(currentPlayerGetViewToWorldMtxf(), (Mtxf *)((u32)matrices + j), &sp40);
+#endif
 
         sp40.m[3][0] -= g_CurrentPlayer->current_model_pos.f[0];
         sp40.m[3][1] -= g_CurrentPlayer->current_model_pos.f[1];
