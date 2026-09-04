@@ -1572,6 +1572,15 @@ void sub_GAME_7F06DB5C(ModelRenderData *arg0, Model *arg1, ModelNode *arg2, quat
 /**
  * Address: 7F06DE04
  */
+#ifdef PORT
+/* unk34/unk38/unk64/unk68 hold what loadAnimationFrame returned, which is an
+ * N64 address: either anim->address + frame*frameSize, or the aligned window
+ * offset of the scratch buffer. Both need the base to be dereferenced. */
+#define ANIMBITS(v) ((u8 *)N64_TO_HOST(v))
+#else
+#define ANIMBITS(v) ((u8 *)(v))
+#endif
+
 u32 modelAnimReadBitsAsU16Angle(u8 *bitstream, u8 width, u32 bitOffset)
 {
     u32 value = 0;
@@ -1697,24 +1706,24 @@ void process_02_position(ModelRenderData *arg0, Model *model, ModelNode *node)
 
     rot1 = D_80036094;
     
-    sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, model->unk34, &rot1);
+    sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, ANIMBITS(model->unk34), &rot1);
 
     if (model->unk2c != 0.0f)
     {
         rot2 = D_800360A0;
-        sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, model->unk38, &rot2);
+        sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, ANIMBITS(model->unk38), &rot2);
         sub_GAME_7F06D160(&rot1, &rot2, model->unk2c);
     }
 
     if (model->unk84 != 0.0f)
     {
         rot3 = D_800360AC;
-        sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, model->unk64, &rot3);
+        sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, ANIMBITS(model->unk64), &rot3);
 
         if (model->unk5c != 0.0f)
         {
             rot4 = D_800360B8;
-            sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, model->unk68, &rot4);
+            sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, ANIMBITS(model->unk68), &rot4);
             sub_GAME_7F06D160(&rot3, &rot4, model->unk5c);
         }
 
@@ -1893,18 +1902,18 @@ void process_03_unknown(ModelRenderData *renderData, Model *model, ModelNode *no
     jointIndex = rodata->JointID;
     skeleton = model->obj->Skeleton;
 
-    angle = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, (u8 *)model->unk34);
+    angle = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, ANIMBITS(model->unk34));
 
     if (model->unk2c != 0.0f) {
-        tmp = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, (u8 *)model->unk38);
+        tmp = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, ANIMBITS(model->unk38));
         angle = sub_GAME_7F06D0CC(angle, tmp, model->unk2c);
     }
 
     if (model->unk84 != 0.0f) {
-        tmp = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, (u8 *)model->unk64);
+        tmp = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, ANIMBITS(model->unk64));
 
         if (model->unk5c != 0.0f) {
-            tmp2 = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, (u8 *)model->unk68);
+            tmp2 = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, ANIMBITS(model->unk68));
             tmp = sub_GAME_7F06D0CC(tmp, tmp2, model->unk5c);
         }
 
