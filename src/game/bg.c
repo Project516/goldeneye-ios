@@ -94,7 +94,13 @@ extern s32 dword_CODE_bss_800815f8;
 s32 ptr_bg_data;
 
 //CODE.bss:8007BF94
+#ifdef PORT
+/* Holds the loaded stan file pointer, used directly as a StanPrefixRecord*
+ * and as the rebase base. An s32 truncates it. */
+void *gptr_stan;
+#else
 s32 gptr_stan;
+#endif
 
 /**
  * address 8007BF98
@@ -867,7 +873,11 @@ void load_bg_file(LEVEL_INDEX levelid)
     ptr_bg_data = (s32) mempAllocBytesInBank(size, 4);
     obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) N64_TO_HOST(ptr_bg_data), 0, size);
  
+#ifdef PORT
+    gptr_stan = _fileNameLoadToBank(levelinfotable[levelentry_index].bg_stan_filename, 2, 0, 4);
+#else
     gptr_stan = (s32) _fileNameLoadToBank(levelinfotable[levelentry_index].bg_stan_filename, 2, 0, 4);
+#endif
  
     stanDetermineEOF((struct StanPrefixRecord *) gptr_stan, 0, (u8 *) gptr_stan);
     stanLoadFile((struct StanPrefixRecord *) gptr_stan);

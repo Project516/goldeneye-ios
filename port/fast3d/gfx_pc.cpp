@@ -622,10 +622,12 @@ void gfx_texture_cache_delete_range(const uint8_t* start, const uint8_t* end) {
 // texels (0xED0F...) decode from the swapped pairs (0x4FCC/0xCC4F) as bright
 // green/pink — the garbled Rareware-logo pixels.
 static bool gfx_tex_source_is_c_array(const uint8_t* addr) {
-    const uintptr_t a = (uintptr_t)addr;
-    if (a >= 0x10000000u && a < 0x20000000u) return false; // cart map + sidecar
-    if (a >= 0x70000000u && a < 0x90000000u) return false; // V1 dram + KSEG0 mirror
-    return true; // exe image: C-compiled array
+    /* Everything N64-derived (cart map, sidecars, DRAM, the KSEG0 mirror and
+     * the buffers allocated inside it) lives in the window. The only
+     * C-compiled texel arrays are in the exe image, which is outside it. The
+     * old literal range checks silently failed once the window moved those
+     * addresses, byte-swapping raw N64 streams as if they were C arrays. */
+    return !n64memContains((uintptr_t)addr, 1);
 }
 
 static std::map<const uint8_t*, std::vector<uint8_t> > s_c_array_tex_norms;
