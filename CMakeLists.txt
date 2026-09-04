@@ -370,15 +370,42 @@ include_directories(
 # ----------------------------------------------------------------------------
 set(LIBS "")
 
-find_package(SDL2 REQUIRED)
-include_directories(SYSTEM "${SDL2_INCLUDE_DIR}")
-list(APPEND LIBS "${SDL2_LIBRARY}")
+if(TARGET_IOS)
+  # No system SDL2 on an iOS SDK, so build it. SDL2 supports iOS upstream and
+  # brings its own UIKit app shell, which is what provides main() there.
+  include(FetchContent)
+  set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+  set(SDL_STATIC ON CACHE BOOL "" FORCE)
+  set(SDL_TEST OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(SDL2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG release-2.30.9
+    GIT_SHALLOW TRUE)
+  FetchContent_MakeAvailable(SDL2)
+  list(APPEND LIBS SDL2-static SDL2main)
 
-find_package(ZLIB REQUIRED)
-if(ZLIB_INCLUDE_DIR)
-  include_directories(SYSTEM "${ZLIB_INCLUDE_DIR}")
+  # zlib likewise. The port needs real inflate for decompressdata
+  # (port/src/rzdecomp.c).
+  set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(ZLIBSRC
+    GIT_REPOSITORY https://github.com/madler/zlib.git
+    GIT_TAG v1.3.1
+    GIT_SHALLOW TRUE)
+  FetchContent_MakeAvailable(ZLIBSRC)
+  include_directories(SYSTEM "${zlibsrc_SOURCE_DIR}" "${zlibsrc_BINARY_DIR}")
+  set(ZLIB_INCLUDE_DIR "${zlibsrc_SOURCE_DIR}")
+  list(APPEND LIBS zlibstatic)
+else()
+  find_package(SDL2 REQUIRED)
+  include_directories(SYSTEM "${SDL2_INCLUDE_DIR}")
+  list(APPEND LIBS "${SDL2_LIBRARY}")
+
+  find_package(ZLIB REQUIRED)
+  if(ZLIB_INCLUDE_DIR)
+    include_directories(SYSTEM "${ZLIB_INCLUDE_DIR}")
+  endif()
+  list(APPEND LIBS "${ZLIB_LIBRARY}")
 endif()
-list(APPEND LIBS "${ZLIB_LIBRARY}")
 
 # Real <zlib.h> for port/src/rzdecomp.c (which backs decompressdata() with real
 # zlib). The game's own src/game/zlib.h sits on the -I path and shadows a plain
