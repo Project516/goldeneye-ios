@@ -5932,9 +5932,17 @@ void modelResetAnimationsScratchBuffer(void)
 }
 
 
+#ifdef PORT
+/* var holds an N64 VMA and diff rebases it onto where the file was loaded, so
+ * the sum is still an N64 address. Add the window base to make it a pointer. */
+#define PROMOTE(var) \
+    if (var) \
+        var = (void *)N64_TO_HOST((u32)(uintptr_t)var + (u32)diff)
+#else
 #define PROMOTE(var) \
     if (var) \
         var = (void *)((u32)var + diff)
+#endif
 
 #ifdef PORT
 /* PC port (D43/D45): Vertex.LinkedTo is a raw vma (u32), not a pointer —
@@ -5952,7 +5960,6 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
     while (node)
     {
         u32 type = node->Opcode & 0xff;
-
         PROMOTE(node->Data);
         PROMOTE(node->Parent);
         PROMOTE(node->Next);

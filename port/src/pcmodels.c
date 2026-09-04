@@ -18,6 +18,7 @@
  * model load; it is a one-shot no-op after the first.
  */
 
+#include "n64mem.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -136,7 +137,8 @@ int pcmodelsLoadSidecars(uintptr_t cartBase, uint32_t romSize)
     if (!f)
         return 0;
     s_base = cartBase + romSize;
-    ok = fsRead(f, (void *)s_base, (int32_t)s_total) == (int32_t)s_total;
+    /* s_base is a cart address, not a host pointer. */
+    ok = fsRead(f, N64_TO_HOST(s_base), (int32_t)s_total) == (int32_t)s_total;
     fsClose(f);
     if (!ok) {
         sysLogPrintf(LOG_ERROR, "pcmodels: short read of %s", s_binPath);
