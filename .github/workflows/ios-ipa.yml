@@ -65,20 +65,21 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check the secrets are present
+      - name: Check the token is present
         env:
-          ROM_URL: ${{ secrets.ROM_URL }}
           DROP_TOKEN: ${{ secrets.IPA_DROP_TOKEN }}
         run: |
-          [ -n "$ROM_URL" ] || { echo "ROM_URL secret is missing" >&2; exit 1; }
           [ -n "$DROP_TOKEN" ] || { echo "IPA_DROP_TOKEN secret is missing" >&2; exit 1; }
 
-      # Never echoed, never uploaded, deleted at the end of the job.
+      # From a release asset on the private drop repo. Deleted, along with
+      # everything derived from it, before the IPA is published.
       - name: Fetch the ROM
         env:
-          ROM_URL: ${{ secrets.ROM_URL }}
+          GH_TOKEN: ${{ secrets.IPA_DROP_TOKEN }}
         run: |
-          curl -sSfL "$ROM_URL" -o baserom.u.z64
+          gh release download rom-ntsc-u \
+            --repo Project516/goldeneye-ios-builds \
+            --pattern baserom.u.z64 --clobber
           echo "abe01e4aeb033b6c0836819f549c791b26cfde83  baserom.u.z64" | shasum -c -
 
       - name: Extract assets

@@ -139,8 +139,21 @@ Secrets:
 
 | Secret | Used by | What it is |
 |---|---|---|
-| `ROM_URL` | `ios-configure`, `ios-ipa` | Private URL of the NTSC-U ROM. Fetched to `baserom.u.z64`, checked against SHA-1 `abe01e4aeb033b6c0836819f549c791b26cfde83`, deleted before the job ends. Never echoed. |
-| `IPA_DROP_TOKEN` | `ios-ipa` | Fine-grained PAT with `contents: write` on `goldeneye-ios-builds` and nothing else. |
+| `IPA_DROP_TOKEN` | `ios-configure`, `ios-ipa` | Fine-grained PAT with `contents: write` on `goldeneye-ios-builds` and nothing else. |
+
+That one token does two jobs: publishing the IPA, and downloading the ROM,
+which lives as the `rom-ntsc-u` release asset on the same private repo. A
+Cloudflare-fronted R2 URL was the first choice and still works from a
+workstation, but it 403s a GitHub runner, so the bucket is out of the CI path.
+Splitting off a read-only token for the ROM would be tighter; one token is what
+exists today.
+
+`ios-configure` treats the ROM as optional: without it `gen_romassets.py`
+sizes the images segment from the CSV maximum, which is short and wrong at
+runtime but compiles fine, and that workflow only reports the error profile.
+`ios-ipa` treats it as required. Both delete it, and everything derived from
+it, before the job ends. Run `ios-ipa` with `check_token_only=true` to verify
+the token on a Linux runner without building anything.
 
 Because the repo is public, a workflow must never run with these secrets on a
 `pull_request` from a fork, and must never use `pull_request_target`. GitHub
