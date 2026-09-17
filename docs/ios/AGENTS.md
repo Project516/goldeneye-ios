@@ -240,7 +240,44 @@ git fetch upstream --tags
 git log --oneline <last-sync>..upstream/master
 ```
 
-Import base: `e4fc9dd0`. Synced through: **`v0.1.0` (`cbed324d`, 2026-09-04)**
--- the two code fixes in that tag (D188 `va_list*`, D189 stack overruns) were
-already here from upstream's unmerged branches, so the sync took docs only.
-Update this line on every sync.
+Import base: `e4fc9dd0`. Synced through: **`v0.2.2` (`298e75e8`, 2026-09-16)**,
+partially. Update this line on every sync.
+
+Upstream rewrote its history between our import and v0.2.0, so our `v0.1.0`
+tag (`cbed324d`) is not an ancestor of `upstream/main`. The equivalent commit
+on the current line is `5c394458`, which is the base to diff from, not the tag.
+
+That range is 233 commits and about 5300 added lines in `src/` and `port/`.
+Four fixes were ported by hand, being the ones that bear on a 64-bit arm64
+host:
+
+| Ours | Upstream | What |
+| --- | --- | --- |
+| `a7f55e4f` | `52477b44` (D248) | scheduler read a client flag at a hardcoded 8-byte offset, halving the port to 30 fps on 64-bit |
+| `c675010e` | `1ba83ba4` (D255) | `vtxstore_fix_refs` read a `Model*` through a 4-byte enum field |
+| `c828f61a` | `1db6992e` (D203/D253) | `stanCheckLinkedSpecialTile` prototype disagreed with its callers' typedef, so `outFlags` landed in the wrong register |
+| `431e8025` | `70bc9d65` (D250) | uncached `getenv` per texture bind, plus a 10x `sysSleep` unit bug in the frame pacer |
+
+Deliberately not ported, with reasons, so a later sync does not re-litigate
+them:
+
+- **Drop-in ROM conversion** (`b2d5551e`, upstream issue #6). Reads as the
+  answer to our on-device asset problem and is not: it spawns a PyInstaller
+  frozen Python binary as a subprocess. iOS allows neither. A native C
+  converter would solve it; that is our work to do, not upstream's.
+- **Native macOS support** (upstream PR #88, open). Intel only, built with
+  Homebrew GNU GCC, and it keeps the below-4 GB fixed mappings, which x86-64
+  macOS allows because `__PAGEZERO` there is `0x10000`. None of that transfers
+  to arm64 iOS. The Mach-O plumbing in it (`gen_macho_syms.py`,
+  `macho_weak_aliases.s`, main-thread AppKit polling) is the only overlap, and
+  we already solved the clang side of it differently.
+- **Audio, input, sky, options-overlay and mouse-aim work.** Real, but Phase 3
+  and 4 for us, and entangled with features rather than portability. D230
+  (RAW16 wavetables are big-endian in the ROM) will matter when we start
+  audio; port it then.
+- **fast3d texture and geometry fixes** (D195, D217, D228, D229, D233). Worth
+  taking, backend-independent, but tangled into the same `gfx_pc.cpp` hunks as
+  the FOV and options features. Port as its own pass.
+
+Upstream has done nothing on GLES, Metal, or arm64: the rendering backend
+remains ours alone.
