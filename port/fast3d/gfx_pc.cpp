@@ -646,7 +646,9 @@ static const uint8_t* gfx_tex_normalize_source(const uint8_t* addr, uint32_t ext
     uint32_t* dst = (uint32_t*)buf.data();
     for (uint32_t i = 0; i < n / 4; i++)
         dst[i] = PD_BE32(src[i]);
-    if (getenv("GE_D71LOG"))
+    static int ge_d71log = -1;
+    if (ge_d71log < 0) ge_d71log = getenv("GE_D71LOG") != NULL;
+    if (ge_d71log)
         fprintf(stderr, "[D71] normalized C-array texture source %p (%u bytes)\n",
                 (const void*)addr, extent);
     return s_c_array_tex_norms.emplace(addr, std::move(buf)).first->second.data();
@@ -1042,8 +1044,14 @@ static void import_texture(int i, int tile, bool importReplacement) {
      * RC2 (mip-chain contamination -> over-tall upload) can be told apart from a
      * decode/row-swap bug. tile_h = base-tile height from SETTILESIZE; if the
      * computed upload height is much larger, the excess rows are LOD mip data.
-     * docs/dev/TEXTURE-GLITCH-ANALYSIS.md sec 6b. */
-    if (getenv("GE_DTEX")) {
+     * docs/dev/TEXTURE-GLITCH-ANALYSIS.md sec 6b.
+     * D250: import_texture() runs on every texture bind, and an uncached
+     * getenv() here profiled at roughly half the render thread's CPU time on
+     * a texture-heavy level. Cache it, like every other env-gated probe.
+     * From upstream 70bc9d65. */
+    static int ge_dtex = -1;
+    if (ge_dtex < 0) ge_dtex = getenv("GE_DTEX") != NULL;
+    if (ge_dtex) {
         static int dtexCount = 0;
         if (dtexCount < 64) {
             const uint32_t row = rdp.texture_tile[tile].line_size_bytes;
@@ -1066,7 +1074,9 @@ static void import_texture(int i, int tile, bool importReplacement) {
         }
     }
 
-    if (getenv("GE_TEXDUMP")) {
+    static int ge_texdump = -1;
+    if (ge_texdump < 0) ge_texdump = getenv("GE_TEXDUMP") != NULL;
+    if (ge_texdump) {
         static int tdc = 0;
         const uint16_t* pal = (const uint16_t*)rdp.palette;
         sysLogPrintf(LOG_NOTE,
@@ -1079,7 +1089,9 @@ static void import_texture(int i, int tile, bool importReplacement) {
         /* GE_TEXRAW=1 additionally writes the raw source bytes handed to the
          * importer (texdump/rNNN_f<fmt>_s<siz>_<w>x<h>.bin) -- lets a decode
          * bug be told apart from a source-data bug offline (D183). */
-        if (tdc <= 400 && getenv("GE_TEXRAW")) {
+        static int ge_texraw = -1;
+        if (ge_texraw < 0) ge_texraw = getenv("GE_TEXRAW") != NULL;
+        if (tdc <= 400 && ge_texraw) {
             char nm[160];
             snprintf(nm, sizeof nm, "texdump/r%03d_f%u_s%u_%ux%u.bin", tdc - 1, fmt, siz,
                      ((rdp.texture_tile[tile].lrs - rdp.texture_tile[tile].uls) >> 2) + 1,

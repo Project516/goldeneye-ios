@@ -143,7 +143,21 @@ void sub_GAME_7F09B820(void)
 */
 void sub_GAME_7F09BAC4(s32 find, s32 replacement) {
     PropRecord* var_s1;
+#ifdef PORT
+    /* D255: the decomp reads this record's Model* through
+     * `((Model*)((ChrRecord*)prop->chr)->chrflags)`, a union pun onto
+     * ChrRecord.chrflags, which is typed CHRFLAG (a 4-byte enum). On 32-bit
+     * N64 that is bit-exact, since the enum and a pointer are both 4 bytes.
+     * On a 64-bit host the enum read is still 4 bytes wide, so the cast takes
+     * the pointer's low 32 bits and zero-extends them, discarding the high
+     * half: a wild pointer, or exactly NULL when the low half happens to be
+     * zero. Read it through ObjectRecord.model instead, the same union memory
+     * with the correct 64-bit type. Identical bytes and identical result on
+     * N64; the D3x pointer-width ABI class. From upstream 1ba83ba4. */
+    ObjectRecord* var_v0;
+#else
     ChrRecord* var_v0;
+#endif
     Model* temp_a0;
     s32* temp_v0_2;
     ModelNode* var_a1;
@@ -153,13 +167,22 @@ void sub_GAME_7F09BAC4(s32 find, s32 replacement) {
     var_s1 = chrpropGetActiveTail();
     while (var_s1 != NULL) {
         if (var_s1->type == 1) {
+#ifdef PORT
+            var_v0 = var_s1->obj;
+            var_v1 = ((Model*)var_v0->model)->obj;
+#else
             var_v0 = var_s1->chr;
             var_v1 = ((Model*)var_v0->chrflags)->obj;
+#endif
             var_a1 = var_v1->RootNode;
             while (var_a1 != NULL) {
                 val = var_a1->Opcode & 0xFF;
                 if (val == 0x18) {
+#ifdef PORT
+                    temp_v0_2 = modelGetNodeRwData((Model*)var_v0->model, var_a1);
+#else
                     temp_v0_2 = modelGetNodeRwData((Model*)var_v0->chrflags, var_a1);
+#endif
                     if (find == *temp_v0_2) {
                         *temp_v0_2 = replacement;
                     }
