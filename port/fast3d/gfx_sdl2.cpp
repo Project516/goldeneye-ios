@@ -422,7 +422,11 @@ static inline void sync_framerate_with_timer(void) {
     // We want to exit a bit early, so we can busy-wait the rest to never miss the deadline
     left -= 15000UL;
     if (left > 0) {
-        sysSleep(left);
+        /* D250: `left` is in 100ns units (qpc_to_100ns); sysSleep() takes
+         * microseconds. Passing it unconverted slept about 10x too long every
+         * time this branch fired, eating the rest of the frame budget whenever
+         * per-frame work left little slack. From upstream 70bc9d65. */
+        sysSleep((uint32_t)(left / 10));
     }
 
     do {

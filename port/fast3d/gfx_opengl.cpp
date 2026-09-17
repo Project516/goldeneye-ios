@@ -696,8 +696,11 @@ static void gfx_opengl_select_texture(int tile, GLuint texture_id, bool linear_f
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, uint32_t width, uint32_t height, bool gen_mipmaps) {
 #ifdef PORT
-    /* GE_TEXDUMP: PPM-dump every uploaded texture (first N) for B2/D161 triage. */
-    if (getenv("GE_TEXDUMP")) {
+    /* GE_TEXDUMP: PPM-dump every uploaded texture (first N) for B2/D161 triage.
+     * D250: runs on every upload, so cache the lookup (upstream 70bc9d65). */
+    static int ge_texdump_gl = -1;
+    if (ge_texdump_gl < 0) ge_texdump_gl = getenv("GE_TEXDUMP") != NULL;
+    if (ge_texdump_gl) {
         static int td = 0;
         if (td < 400 && width && height && width < 4096 && height < 4096) {
             char nm[128];
@@ -1076,7 +1079,9 @@ static void gfx_opengl_end_frame(void) {
  * the default framebuffer (the window back buffer; the scene renders there
  * directly at 1:1 window size) and write a P6 PPM. */
 extern "C" bool gfx_opengl_pcdump_enabled(void) {
-    return getenv("GE_PCDUMP") != NULL;
+    static int cached = -1;
+    if (cached < 0) cached = getenv("GE_PCDUMP") != NULL;
+    return cached != 0;
 }
 
 extern "C" bool gfx_opengl_dump_bound_fbo(uint32_t width, uint32_t height, const char* path) {
