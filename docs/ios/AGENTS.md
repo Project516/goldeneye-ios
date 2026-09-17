@@ -237,7 +237,7 @@ To review what is new upstream:
 ```sh
 git remote add upstream https://github.com/jkdansereau/goldeneye-pc-port.git
 git fetch upstream --tags
-git log --oneline <last-sync>..upstream/master
+git log --oneline <last-sync>..upstream/main
 ```
 
 Import base: `e4fc9dd0`. Synced through: **`v0.2.2` (`298e75e8`, 2026-09-16)**,
